@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { validateCategoryPayload, type CategoryPayload } from "@/lib/validation";
 
 function error(message: string, status = 400) {
   return NextResponse.json({ message }, { status });
@@ -9,39 +10,43 @@ function error(message: string, status = 400) {
 export async function GET() {
   const categories = await prisma.category.findMany({
     orderBy: { createdAt: "asc" },
+    include: {
+      _count: {
+        select: { checkIns: true },
+      },
+    },
   });
 
-  return NextResponse.json(categories);
+  return NextResponse.json(
+    categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      color: category.color,
+      icon: category.icon,
+      checkInCount: category._count.checkIns,
+      createdAt: category.createdAt,
+      updatedAt: category.updatedAt,
+    })),
+  );
 }
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as {
-      name?: string;
-      color?: string;
-      icon?: string;
-    };
+    const body = (await request.json()) as CategoryPayload;
+    const result = validateCategoryPayload(body);
 
-    const name = body.name?.trim();
-    const color = body.color?.trim() || "#3B82F6";
-    const icon = body.icon?.trim() || "BookOpen";
-
-    if (!name) {
-      return error("分类名称不能为空");
-    }
-
-    if (name.length > 20) {
-      return error("分类名称不能超过 20 个字符");
+    if ("message" in result) {
+      return error(result.message ?? "参数错误");
     }
 
     const category = await prisma.category.create({
-      data: { name, color, icon },
+      data: result.data,
     });
 
     return NextResponse.json(category, { status: 201 });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-      return error("分类名称已存在");
+      return error("分类名称已存在", 409);
     }
 
     return error("创建分类失败，请稍后再试", 500);

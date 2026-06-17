@@ -1,4 +1,4 @@
-import { BookOpenCheck, FolderKanban, LayoutDashboard } from "lucide-react";
+import { BarChart3, BookOpenCheck, FolderKanban, LayoutDashboard } from "lucide-react";
 
 export const navItems = [
   {
@@ -15,5 +15,10 @@ export const navItems = [
     href: "/categories",
     label: "分类",
     icon: FolderKanban,
+  },
+  {
+    href: "/statistics",
+    label: "统计",
+    icon: BarChart3,
   },
 ];

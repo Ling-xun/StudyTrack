@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Palette, Plus, Shapes } from "lucide-react";
+import { useToast } from "@/components/common/ToastProvider";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FieldError, Input, Label, Select } from "@/components/ui/form";
@@ -12,6 +13,7 @@ const colorOptions = ["#3B82F6", "#8B5CF6", "#F97316", "#22C55E", "#EC4899", "#1
 
 export function CategoryForm() {
   const router = useRouter();
+  const { toast } = useToast();
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -36,10 +38,12 @@ export function CategoryForm() {
       if (!response.ok) {
         const payload = (await response.json()) as { message?: string };
         setError(payload.message ?? "创建分类失败");
+        toast(payload.message ?? "创建分类失败", "error");
         return;
       }
 
       setSuccess("分类已创建");
+      toast("创建成功");
       const form = document.getElementById("category-form") as HTMLFormElement | null;
       form?.reset();
       setColor(colorOptions[0]);

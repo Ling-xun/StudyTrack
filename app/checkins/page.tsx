@@ -1,24 +1,71 @@
 import { BookOpenCheck, Plus } from "lucide-react";
+import type { Prisma } from "@prisma/client";
 import { CheckInCard } from "@/components/checkins/CheckInCard";
+import { CheckInFilterBar } from "@/components/checkins/CheckInFilterBar";
+import { EmptyState } from "@/components/common/EmptyState";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ButtonLink } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
+import { parseStudyDate } from "@/lib/validation";
 import type { CheckInWithCategory } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function CheckInsPage() {
-  const checkIns = (await prisma.checkIn.findMany({
+export default async function CheckInsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    keyword?: string;
+    categoryId?: string;
+    date?: string;
+  }>;
+}) {
+  const params = await searchParams;
+  const keyword = params.keyword?.trim() ?? "";
+  const categoryId = params.categoryId?.trim() ?? "";
+  const date = params.date?.trim() ?? "";
+  const where: Prisma.CheckInWhereInput = {};
+
+  if (keyword) {
+    where.OR = [{ title: { contains: keyword } }, { content: { contains: keyword } }];
+  }
+
+  if (categoryId) {
+    where.categoryId = categoryId;
+  }
+
+  if (date) {
+    const parsedDate = parseStudyDate(date);
+
+    if (parsedDate) {
+      where.studyDate = parsedDate;
+    }
+  }
+
+  const [checkIns, categories] = await Promise.all([
+    prisma.checkIn.findMany({
+      where,
     include: { category: true },
     orderBy: [{ studyDate: "desc" }, { createdAt: "desc" }],
-  })) as CheckInWithCategory[];
+    }),
+    prisma.category.findMany({
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        name: true,
+        color: true,
+        icon: true,
+      },
+    }),
+  ]);
+
+  const hasFilters = Boolean(keyword || categoryId || date);
 
   return (
     <>
       <PageHeader
         title="学习记录"
-        description="按日期倒序查看所有打卡内容，快速回顾近期学习重点。"
+        description="查看、搜索和管理你的学习打卡内容。"
         action={
           <ButtonLink href="/checkins/new">
             <Plus className="h-4 w-4" aria-hidden="true" />
@@ -27,23 +74,32 @@ export default async function CheckInsPage() {
         }
       />
 
+      <CheckInFilterBar
+        categories={categories}
+        keyword={keyword}
+        categoryId={categoryId}
+        date={date}
+      />
+
       {checkIns.length === 0 ? (
-        <Card className="flex min-h-72 flex-col items-center justify-center text-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-lg bg-teal-50 text-teal-700 ring-1 ring-teal-100">
-            <BookOpenCheck className="h-7 w-7" aria-hidden="true" />
-          </span>
-          <p className="mt-4 text-lg font-bold text-slate-950">还没有学习记录</p>
-          <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">
-            点击新建打卡，记录今天学了什么。
-          </p>
-          <ButtonLink href="/checkins/new" className="mt-5">
-            新建打卡
-          </ButtonLink>
-        </Card>
+        <EmptyState
+          icon={BookOpenCheck}
+          title={hasFilters ? "没有找到匹配的学习记录" : "还没有学习记录"}
+          description={hasFilters ? "试试换个关键词，或者清空筛选条件。" : "点击新建打卡，记录今天学了什么。"}
+          action={
+            hasFilters ? (
+              <ButtonLink href="/checkins" variant="secondary">
+                清空筛选
+              </ButtonLink>
+            ) : (
+              <ButtonLink href="/checkins/new">新建打卡</ButtonLink>
+            )
+          }
+        />
       ) : (
         <div className="grid gap-4">
           {checkIns.map((checkIn) => (
-            <CheckInCard key={checkIn.id} checkIn={checkIn} />
+            <CheckInCard key={checkIn.id} checkIn={checkIn as CheckInWithCategory} />
           ))}
         </div>
       )}

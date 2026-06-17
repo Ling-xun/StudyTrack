@@ -21,6 +21,45 @@
 - 学习记录列表
 - 响应式 UI
 
+## V2 新增功能
+
+- 学习记录编辑
+- 学习记录删除
+- 学习记录搜索
+- 按分类筛选学习记录
+- 按日期筛选学习记录
+- 分类编辑
+- 分类删除保护
+- 分类记录数量统计
+- 数据统计页面
+- 最近 7 天学习趋势
+- 分类学习时长占比
+- Toast 提示
+- 删除确认弹窗
+
+## 页面
+
+- `/` Dashboard 首页
+- `/checkins` 学习记录
+- `/checkins/new` 新建学习打卡
+- `/checkins/[id]/edit` 编辑学习打卡
+- `/categories` 分类管理
+- `/statistics` 数据统计
+
+## API
+
+- `GET /api/checkins`
+- `POST /api/checkins`
+- `GET /api/checkins/[id]`
+- `PUT /api/checkins/[id]`
+- `DELETE /api/checkins/[id]`
+- `GET /api/categories`
+- `POST /api/categories`
+- `GET /api/categories/[id]`
+- `PUT /api/categories/[id]`
+- `DELETE /api/categories/[id]`
+- `GET /api/statistics`
+
 ## 本地运行
 
 1. 安装依赖

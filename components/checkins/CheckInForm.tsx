@@ -3,18 +3,39 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { BookMarked, FolderPlus, Save } from "lucide-react";
+import { useToast } from "@/components/common/ToastProvider";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FieldError, Input, Label, Select, Textarea } from "@/components/ui/form";
-import { dateInputValue } from "@/lib/date";
+import { dateInputValue, formatDate } from "@/lib/date";
 import type { CategorySummary } from "@/lib/types";
 
 const moods = ["", "轻松", "一般", "困难", "状态不错", "有点吃力"];
 
-export function CheckInForm({ categories }: { categories: CategorySummary[] }) {
+type InitialCheckIn = {
+  id: string;
+  title: string;
+  content: string;
+  studyDate: Date | string;
+  duration: number;
+  mood: string | null;
+  categoryId: string;
+};
+
+export function CheckInForm({
+  categories,
+  initialData,
+  mode = "create",
+}: {
+  categories: CategorySummary[];
+  initialData?: InitialCheckIn;
+  mode?: "create" | "edit";
+}) {
   const router = useRouter();
+  const { toast } = useToast();
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
+  const isEdit = mode === "edit";
 
   if (categories.length === 0) {
     return (
@@ -37,8 +58,8 @@ export function CheckInForm({ categories }: { categories: CategorySummary[] }) {
     setError("");
 
     startTransition(async () => {
-      const response = await fetch("/api/checkins", {
-        method: "POST",
+      const response = await fetch(isEdit ? `/api/checkins/${initialData?.id}` : "/api/checkins", {
+        method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: formData.get("title"),
@@ -52,10 +73,11 @@ export function CheckInForm({ categories }: { categories: CategorySummary[] }) {
 
       if (!response.ok) {
         const payload = (await response.json()) as { message?: string };
-        setError(payload.message ?? "创建学习记录失败");
+        setError(payload.message ?? (isEdit ? "更新学习记录失败" : "创建学习记录失败"));
         return;
       }
 
+      toast(isEdit ? "更新成功" : "创建成功");
       router.push("/checkins");
       router.refresh();
     });
@@ -68,20 +90,29 @@ export function CheckInForm({ categories }: { categories: CategorySummary[] }) {
           <BookMarked className="h-5 w-5" aria-hidden="true" />
         </span>
         <div>
-          <h2 className="text-lg font-bold text-slate-950">记录一次学习</h2>
-          <p className="mt-0.5 text-sm text-slate-500">把今天的学习节奏留在这里</p>
+          <h2 className="text-lg font-bold text-slate-950">{isEdit ? "编辑学习记录" : "记录一次学习"}</h2>
+          <p className="mt-0.5 text-sm text-slate-500">
+            {isEdit ? "更新这次学习的内容和状态" : "把今天的学习节奏留在这里"}
+          </p>
         </div>
       </div>
       <form action={handleSubmit} className="space-y-5">
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="title">学习标题</Label>
-            <Input id="title" name="title" placeholder="例如 C++ 多态复习" maxLength={50} required />
+            <Input
+              id="title"
+              name="title"
+              placeholder="例如 C++ 多态复习"
+              defaultValue={initialData?.title}
+              maxLength={50}
+              required
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="categoryId">分类</Label>
-            <Select id="categoryId" name="categoryId" required defaultValue={categories[0]?.id}>
+            <Select id="categoryId" name="categoryId" required defaultValue={initialData?.categoryId ?? categories[0]?.id}>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
@@ -92,17 +123,33 @@ export function CheckInForm({ categories }: { categories: CategorySummary[] }) {
 
           <div className="space-y-2">
             <Label htmlFor="studyDate">学习日期</Label>
-            <Input id="studyDate" name="studyDate" type="date" defaultValue={dateInputValue()} required />
+            <Input
+              id="studyDate"
+              name="studyDate"
+              type="date"
+              defaultValue={initialData ? formatDate(initialData.studyDate) : dateInputValue()}
+              required
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="duration">学习时长（分钟）</Label>
-            <Input id="duration" name="duration" type="number" min={1} step={1} placeholder="60" required />
+            <Input
+              id="duration"
+              name="duration"
+              type="number"
+              min={1}
+              max={1440}
+              step={1}
+              placeholder="60"
+              defaultValue={initialData?.duration}
+              required
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="mood">学习状态</Label>
-            <Select id="mood" name="mood" defaultValue="">
+            <Select id="mood" name="mood" defaultValue={initialData?.mood ?? ""}>
               {moods.map((mood) => (
                 <option key={mood || "empty"} value={mood}>
                   {mood || "不填写"}
@@ -117,6 +164,7 @@ export function CheckInForm({ categories }: { categories: CategorySummary[] }) {
               id="content"
               name="content"
               placeholder="写下今天学习的知识点、练习内容或复习重点"
+              defaultValue={initialData?.content}
               maxLength={1000}
               required
             />
@@ -131,7 +179,7 @@ export function CheckInForm({ categories }: { categories: CategorySummary[] }) {
           </ButtonLink>
           <Button type="submit" disabled={isPending}>
             <Save className="h-4 w-4" aria-hidden="true" />
-            {isPending ? "保存中" : "保存打卡"}
+            {isPending ? "保存中..." : isEdit ? "保存修改" : "保存打卡"}
           </Button>
         </div>
       </form>

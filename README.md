@@ -1,6 +1,6 @@
 # StudyTrack
 
-一个使用 Next.js + TypeScript + Prisma + SQLite 开发的学习打卡 Web App。
+一个使用 Next.js + TypeScript + Prisma + Postgres 开发的学习打卡 Web App。
 
 ## 技术栈
 
@@ -9,7 +9,7 @@
 - Tailwind CSS
 - shadcn/ui 风格组件
 - Prisma
-- SQLite
+- Postgres
 - dayjs
 - lucide-react
 
@@ -36,9 +36,11 @@
 - 分类学习时长占比
 - Toast 提示
 - 删除确认弹窗
+- 私人访问密码登录
 
 ## 页面
 
+- `/login` 私人登录
 - `/` Dashboard 首页
 - `/checkins` 学习记录
 - `/checkins/new` 新建学习打卡
@@ -59,6 +61,20 @@
 - `PUT /api/categories/[id]`
 - `DELETE /api/categories/[id]`
 - `GET /api/statistics`
+- `POST /api/login`
+- `POST /api/logout`
+
+## 环境变量
+
+```bash
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require"
+APP_PASSWORD="change-this-password"
+AUTH_SECRET="change-this-long-random-secret"
+```
+
+- `APP_PASSWORD`：登录 StudyTrack 的访问密码。
+- `AUTH_SECRET`：用于签名登录状态，建议使用一串较长的随机字符。
+- 本地测试时，当前 `.env` 里的默认登录密码是 `123456`。
 
 ## 本地运行
 
@@ -86,12 +102,6 @@ npx prisma generate
 npx prisma migrate dev
 ```
 
-如果本机 Prisma 迁移引擎不可用，也可以使用项目内置初始化脚本：
-
-```bash
-npm run db:init
-```
-
 5. 写入默认分类
 
 ```bash
@@ -105,6 +115,25 @@ npm run dev
 ```
 
 打开 http://localhost:3000 查看应用。
+
+## 部署到 Vercel
+
+Windows 和安卓共享数据需要使用线上 Postgres，例如 Neon、Supabase 或 Vercel Marketplace 里的 Postgres 服务。
+
+部署时在 Vercel Project Settings 的 Environment Variables 里配置：
+
+- `DATABASE_URL`：线上 Postgres 连接字符串
+- `APP_PASSWORD`：你的私人访问密码
+- `AUTH_SECRET`：较长随机字符串
+
+环境变量保存后，需要重新部署才会生效。
+
+第一次连接线上数据库后，运行：
+
+```bash
+npm run prisma:deploy
+npm run prisma:seed
+```
 
 ## 项目结构
 

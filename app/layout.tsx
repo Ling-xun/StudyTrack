@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { ToastProvider } from "@/components/common/ToastProvider";
-import { AppSidebar } from "@/components/layout/AppSidebar";
-import { MobileNav } from "@/components/layout/MobileNav";
+import { AppShell } from "@/components/layout/AppShell";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,15 +14,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html lang="zh-CN">
       <body>
         <ToastProvider>
-          <div className="min-h-screen lg:grid lg:grid-cols-[18rem_1fr]">
-            <AppSidebar />
-            <main className="pb-24 lg:pb-0">
-              <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
-                {children}
-              </div>
-            </main>
-            <MobileNav />
-          </div>
+          <AppShell>{children}</AppShell>
         </ToastProvider>
       </body>
     </html>

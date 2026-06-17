@@ -135,6 +135,30 @@ npm run prisma:deploy
 npm run prisma:seed
 ```
 
+## 部署到 Railway
+
+Railway 更适合把这个项目作为一个完整的 Next.js + Postgres 私人应用来运行。
+
+1. 在 Railway 创建项目，选择从 GitHub 仓库部署。
+2. 在项目画布里点击 `+ New`，添加 `Database -> PostgreSQL`。
+3. 打开 Next.js 服务的 `Variables`，添加 Postgres 服务里的 `DATABASE_URL` 引用变量。
+4. 在 Next.js 服务的 `Variables` 里再添加：
+
+```bash
+APP_PASSWORD="your-login-password"
+AUTH_SECRET="your-long-random-secret"
+```
+
+5. 在 Next.js 服务的 `Settings -> Deploy -> Pre-deploy Command` 里填写：
+
+```bash
+npm run railway:predeploy
+```
+
+6. 在 Next.js 服务的 `Settings -> Networking` 里点击 `Generate Domain` 生成公网访问地址。
+
+Railway 会使用 `npm run build` 构建项目，并使用 `npm run start` 启动 standalone Next.js 服务。
+
 ## 项目结构
 
 - `app`：页面、布局和 API Routes

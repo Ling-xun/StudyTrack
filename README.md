@@ -126,6 +126,12 @@ Windows 和安卓共享数据需要使用线上 Postgres，例如 Neon、Supabas
 - `APP_PASSWORD`：你的私人访问密码
 - `AUTH_SECRET`：较长随机字符串
 
+Vercel 的 Build Command 建议设置为：
+
+```bash
+npm run vercel-build
+```
+
 环境变量保存后，需要重新部署才会生效。
 
 第一次连接线上数据库后，运行：

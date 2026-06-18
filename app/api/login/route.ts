@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => null)) as LoginPayload | null;
 
-  if (body?.password !== appPassword) {
+  if (body?.password?.trim() !== appPassword) {
     return NextResponse.json({ message: "密码不正确" }, { status: 401 });
   }
 
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     maxAge: SESSION_TTL_SECONDS,
     path: "/",
     sameSite: "lax",
-    secure: shouldUseSecureCookie(),
+    secure: shouldUseSecureCookie(request),
   });
 
   return response;

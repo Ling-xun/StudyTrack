@@ -68,6 +68,17 @@ export function getAppPassword() {
   return process.env.APP_PASSWORD?.trim();
 }
 
-export function shouldUseSecureCookie() {
-  return process.env.NODE_ENV === "production" && process.env.COOKIE_SECURE !== "false";
+export function shouldUseSecureCookie(request: Request) {
+  if (process.env.COOKIE_SECURE === "true") {
+    return true;
+  }
+
+  if (process.env.COOKIE_SECURE === "false") {
+    return false;
+  }
+
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const requestProtocol = new URL(request.url).protocol;
+
+  return requestProtocol === "https:" || forwardedProto === "https";
 }

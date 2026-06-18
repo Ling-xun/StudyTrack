@@ -3,15 +3,84 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarDays, Clock, Pencil, Smile, Trash2 } from "lucide-react";
+import { BookOpen, CalendarDays, Clock, Pencil, Smile, Trash2 } from "lucide-react";
+import { ImmersiveReader } from "@/components/checkins/ImmersiveReader";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useToast } from "@/components/common/ToastProvider";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CategoryIcon } from "@/lib/icons";
 import { formatDate } from "@/lib/date";
-import { invalidateCheckInData } from "@/lib/queries";
-import type { CheckInListItem } from "@/lib/types";
+import { invalidateCheckInData, queryKeys, requestJson } from "@/lib/queries";
+import type { CheckInListItem, CheckInWithCategory } from "@/lib/types";
+
+function CheckInCardReaderAction({ checkIn }: { checkIn: CheckInListItem }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [readerCheckIn, setReaderCheckIn] = useState<CheckInWithCategory | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function openReader() {
+    setIsLoading(true);
+
+    try {
+      const fullCheckIn = await requestJson<CheckInWithCategory>(`/api/checkins/${checkIn.id}`);
+      queryClient.setQueryData(queryKeys.checkIn(checkIn.id), fullCheckIn);
+      setReaderCheckIn(fullCheckIn);
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "打开沉浸阅读失败", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function saveContent(content: string) {
+    if (!readerCheckIn) {
+      return;
+    }
+
+    const updatedCheckIn = await requestJson<CheckInWithCategory>(`/api/checkins/${readerCheckIn.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: readerCheckIn.title,
+        categoryId: readerCheckIn.categoryId,
+        studyDate: formatDate(readerCheckIn.studyDate),
+        duration: readerCheckIn.duration,
+        mood: readerCheckIn.mood ?? "",
+        content,
+      }),
+    });
+
+    setReaderCheckIn(updatedCheckIn);
+    queryClient.setQueryData(queryKeys.checkIn(updatedCheckIn.id), updatedCheckIn);
+    invalidateCheckInData(queryClient, updatedCheckIn.id);
+    toast("阅读内容已保存");
+  }
+
+  return (
+    <>
+      <Button type="button" variant="secondary" className="h-10 px-3" onClick={openReader} disabled={isLoading}>
+        <BookOpen className="h-4 w-4" aria-hidden="true" />
+        {isLoading ? "打开中" : "沉浸编辑"}
+      </Button>
+
+      {readerCheckIn ? (
+        <ImmersiveReader
+          title={readerCheckIn.title}
+          content={readerCheckIn.content}
+          categoryName={readerCheckIn.category.name}
+          categoryColor={readerCheckIn.category.color}
+          editable
+          showTrigger={false}
+          openOnMount
+          onRequestClose={() => setReaderCheckIn(null)}
+          onSaveContent={saveContent}
+        />
+      ) : null}
+    </>
+  );
+}
 
 export function CheckInCard({ checkIn }: { checkIn: CheckInListItem }) {
   const queryClient = useQueryClient();
@@ -86,6 +155,7 @@ export function CheckInCard({ checkIn }: { checkIn: CheckInListItem }) {
             <Pencil className="h-4 w-4" aria-hidden="true" />
             编辑
           </Link>
+          <CheckInCardReaderAction checkIn={checkIn} />
           <Button type="button" variant="danger" className="h-10 px-3" onClick={() => setConfirmOpen(true)}>
             <Trash2 className="h-4 w-4" aria-hidden="true" />
             删除

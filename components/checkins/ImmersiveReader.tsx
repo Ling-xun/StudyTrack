@@ -390,6 +390,9 @@ export function ImmersiveReader({
   editable = false,
   variant = "section",
   triggerLabel = "沉浸阅读",
+  showTrigger = true,
+  openOnMount = false,
+  onRequestClose,
   onContentChange,
   onSaveContent,
 }: {
@@ -400,6 +403,9 @@ export function ImmersiveReader({
   editable?: boolean;
   variant?: ReaderVariant;
   triggerLabel?: string;
+  showTrigger?: boolean;
+  openOnMount?: boolean;
+  onRequestClose?: () => void;
   onContentChange?: (content: string) => void;
   onSaveContent?: (content: string) => Promise<void> | void;
 }) {
@@ -418,6 +424,12 @@ export function ImmersiveReader({
   const readingMinutes = useMemo(() => estimateReadingMinutes(draftContent), [draftContent]);
   const paragraphCount = blocks.filter((block) => block.type === "paragraph").length;
   const codeCount = blocks.filter((block) => block.type === "code").length;
+
+  useEffect(() => {
+    if (openOnMount) {
+      setOpen(true);
+    }
+  }, [openOnMount]);
 
   useEffect(() => {
     if (!open || !isEditing) {
@@ -470,6 +482,12 @@ export function ImmersiveReader({
     blockRefs.current[index]?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  function closeReader() {
+    setOpen(false);
+    setIsEditing(false);
+    onRequestClose?.();
+  }
+
   async function saveDraft() {
     const nextContent = draftContent.trim();
 
@@ -511,7 +529,7 @@ export function ImmersiveReader({
                 onOutlineToggle={() => setShowOutline((value) => !value)}
                 onEditToggle={() => setIsEditing((value) => !value)}
                 onSave={saveDraft}
-                onClose={() => setOpen(false)}
+                onClose={closeReader}
               />
 
               <div className={cn("grid min-h-0 flex-1", !isEditing && showOutline ? "lg:grid-cols-[minmax(0,18rem)_1fr]" : "")}>
@@ -552,12 +570,12 @@ export function ImmersiveReader({
                     {saveError ? <p className="mt-5 rounded-lg bg-red-600/10 px-3 py-2 text-sm font-bold text-red-600">{saveError}</p> : null}
 
                     {isEditing ? (
-                      <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                        <label className="min-w-0">
+                      <div className="mt-8">
+                        <label className="block min-w-0">
                           <span className={cn("text-sm font-bold", themeClasses[theme].muted)}>编辑学习内容</span>
                           <textarea
                             className={cn(
-                              "mt-3 h-[64dvh] min-h-80 w-full resize-none rounded-lg border p-4 text-base leading-7 shadow-sm outline-none transition focus:ring-4 focus:ring-teal-600/15",
+                              "mt-3 h-[68dvh] min-h-96 w-full resize-none rounded-lg border p-5 text-base leading-7 shadow-sm outline-none transition focus:ring-4 focus:ring-teal-600/15",
                               themeClasses[theme].editor,
                             )}
                             maxLength={50000}
@@ -568,12 +586,6 @@ export function ImmersiveReader({
                             }}
                           />
                         </label>
-                        <div className="min-w-0">
-                          <p className={cn("text-sm font-bold", themeClasses[theme].muted)}>实时预览</p>
-                          <div className="mt-3 max-h-[64dvh] min-h-80 overflow-y-auto rounded-lg border border-current/10 p-4">
-                            <ReaderContent blocks={blocks} theme={theme} fontSize="comfortable" />
-                          </div>
-                        </div>
                       </div>
                     ) : (
                       <ReaderContent blocks={blocks} theme={theme} fontSize={fontSize} blockRefs={blockRefs} />
@@ -587,12 +599,16 @@ export function ImmersiveReader({
         )
       : null;
 
-  const trigger = (
+  const trigger = showTrigger ? (
     <Button type="button" className="h-10 px-3" onClick={() => setOpen(true)}>
       <Maximize2 className="h-4 w-4" aria-hidden="true" />
       {triggerLabel}
     </Button>
-  );
+  ) : null;
+
+  if (!showTrigger) {
+    return <>{readerDialog}</>;
+  }
 
   if (variant === "compact") {
     return (

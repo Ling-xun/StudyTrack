@@ -53,25 +53,59 @@ textarea {
   word-break: break-word;
 }
 
-.page-transition {
-  animation: page-enter 150ms ease-out both;
+.page-transition-stage {
+  position: relative;
+  min-height: min(62vh, 42rem);
+}
+
+.page-transition-view {
+  min-width: 0;
+  transform-origin: 50% 2rem;
   will-change: opacity, transform;
+}
+
+.page-transition-enter {
+  animation: page-enter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.page-transition-exit {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: page-exit 180ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 @keyframes page-enter {
   from {
-    opacity: 0.72;
-    transform: translateY(6px);
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.992);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes page-exit {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate3d(0, -5px, 0) scale(0.998);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .page-transition {
+  .page-transition-enter,
+  .page-transition-exit {
     animation: none;
+  }
+
+  .page-transition-exit {
+    display: none;
   }
 }

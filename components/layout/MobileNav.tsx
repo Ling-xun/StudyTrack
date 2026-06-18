@@ -25,7 +25,7 @@ export function MobileNav() {
             onMouseEnter={() => prefetchRouteData(queryClient, item.href)}
             onTouchStart={() => prefetchRouteData(queryClient, item.href)}
             className={cn(
-              "flex h-14 flex-col items-center justify-center gap-1 rounded-lg text-xs font-semibold text-slate-500 transition",
+              "flex h-14 flex-col items-center justify-center gap-1 rounded-lg text-xs font-semibold text-slate-500 transition-[background-color,color,box-shadow,transform] duration-200 ease-out active:scale-[0.98]",
               active && "shadow-sm",
             )}
             style={
@@ -37,7 +37,7 @@ export function MobileNav() {
                 : undefined
             }
           >
-            <Icon className="h-5 w-5" style={active ? { color: "#ccfbf1" } : undefined} aria-hidden="true" />
+            <Icon className="h-5 w-5 transition-colors duration-200" style={active ? { color: "#ccfbf1" } : undefined} aria-hidden="true" />
             {item.label}
           </Link>
         );

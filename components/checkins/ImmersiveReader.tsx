@@ -246,7 +246,8 @@ function ReaderToolbar({
   theme,
   fontSize,
   showOutline,
-  progress,
+  progressBarRef,
+  progressTextRef,
   canEdit,
   isEditing,
   isSaving,
@@ -260,7 +261,8 @@ function ReaderToolbar({
   theme: ReaderTheme;
   fontSize: FontSize;
   showOutline: boolean;
-  progress: number;
+  progressBarRef: MutableRefObject<HTMLDivElement | null>;
+  progressTextRef: MutableRefObject<HTMLSpanElement | null>;
   canEdit: boolean;
   isEditing: boolean;
   isSaving: boolean;
@@ -278,7 +280,7 @@ function ReaderToolbar({
   ];
 
   return (
-    <div className={cn("sticky top-0 z-10 border-b px-4 py-3 backdrop-blur-xl", themeClasses[theme].toolbar)}>
+    <div className={cn("sticky top-0 z-10 border-b px-4 py-3", themeClasses[theme].toolbar)}>
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2">
         <div className="flex items-center gap-1 rounded-lg border border-current/10 p-1">
           {themeMeta.map((item) => {
@@ -363,9 +365,11 @@ function ReaderToolbar({
 
         <div className="ml-auto flex min-w-[8rem] items-center gap-3">
           <div className="h-2 flex-1 overflow-hidden rounded-full bg-current/10">
-            <div className="h-full rounded-full bg-teal-600 transition-[width]" style={{ width: `${progress}%` }} />
+            <div ref={progressBarRef} className="h-full rounded-full bg-teal-600" style={{ width: "0%" }} />
           </div>
-          <span className="w-10 text-right text-xs font-bold tabular-nums opacity-70">{progress}%</span>
+          <span ref={progressTextRef} className="w-10 text-right text-xs font-bold tabular-nums opacity-70">
+            0%
+          </span>
         </div>
 
         <button
@@ -417,8 +421,11 @@ export function ImmersiveReader({
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [draftContent, setDraftContent] = useState(content);
-  const [progress, setProgress] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const progressBarRef = useRef<HTMLDivElement | null>(null);
+  const progressTextRef = useRef<HTMLSpanElement | null>(null);
+  const scrollFrameRef = useRef<number | null>(null);
+  const progressValueRef = useRef(0);
   const blockRefs = useRef<Array<HTMLElement | null>>([]);
   const blocks = useMemo(() => parseContent(draftContent), [draftContent]);
   const readingMinutes = useMemo(() => estimateReadingMinutes(draftContent), [draftContent]);
@@ -461,11 +468,31 @@ export function ImmersiveReader({
 
   useEffect(() => {
     if (open) {
-      setProgress(0);
+      updateProgress(0);
       setSaveError("");
       scrollRef.current?.scrollTo({ top: 0 });
     }
   }, [open]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollFrameRef.current !== null) {
+        cancelAnimationFrame(scrollFrameRef.current);
+      }
+    };
+  }, []);
+
+  function updateProgress(progress: number) {
+    progressValueRef.current = progress;
+
+    if (progressBarRef.current) {
+      progressBarRef.current.style.width = `${progress}%`;
+    }
+
+    if (progressTextRef.current) {
+      progressTextRef.current.textContent = `${progress}%`;
+    }
+  }
 
   function handleScroll() {
     const container = scrollRef.current;
@@ -474,8 +501,20 @@ export function ImmersiveReader({
       return;
     }
 
-    const maxScroll = container.scrollHeight - container.clientHeight;
-    setProgress(maxScroll <= 0 ? 100 : Math.min(100, Math.round((container.scrollTop / maxScroll) * 100)));
+    if (scrollFrameRef.current !== null) {
+      return;
+    }
+
+    scrollFrameRef.current = requestAnimationFrame(() => {
+      scrollFrameRef.current = null;
+
+      const maxScroll = container.scrollHeight - container.clientHeight;
+      const nextProgress = maxScroll <= 0 ? 100 : Math.min(100, Math.round((container.scrollTop / maxScroll) * 100));
+
+      if (nextProgress !== progressValueRef.current) {
+        updateProgress(nextProgress);
+      }
+    });
   }
 
   function jumpToBlock(index: number) {
@@ -514,13 +553,14 @@ export function ImmersiveReader({
   const readerDialog =
     open && typeof document !== "undefined"
       ? createPortal(
-          <div className="fixed inset-0 z-50 bg-slate-950/60 p-0 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="沉浸阅读">
+          <div className="fixed inset-0 z-50 bg-slate-950/60 p-0" role="dialog" aria-modal="true" aria-label="沉浸阅读">
             <div className={cn("flex h-dvh flex-col overflow-hidden", themeClasses[theme].shell)}>
               <ReaderToolbar
                 theme={theme}
                 fontSize={fontSize}
                 showOutline={showOutline}
-                progress={progress}
+                progressBarRef={progressBarRef}
+                progressTextRef={progressTextRef}
                 canEdit={editable}
                 isEditing={isEditing}
                 isSaving={isSaving}
@@ -555,7 +595,12 @@ export function ImmersiveReader({
                   </aside>
                 ) : null}
 
-                <main ref={scrollRef} className="min-h-0 overflow-y-auto px-4 py-7 sm:px-8 lg:px-12" onScroll={handleScroll}>
+                <main
+                  ref={scrollRef}
+                  className="min-h-0 overflow-y-auto px-4 py-7 sm:px-8 lg:px-12"
+                  style={{ contain: "layout paint", overscrollBehavior: "contain" }}
+                  onScroll={handleScroll}
+                >
                   <article className={cn("mx-auto pb-20", isEditing ? "max-w-5xl" : "max-w-3xl")}>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="inline-flex max-w-full min-w-0 items-center rounded-full px-3 py-1.5 text-xs font-bold text-white" style={{ backgroundColor: categoryColor }}>

@@ -39,7 +39,7 @@ export function AppSidebar() {
               onFocus={() => prefetchRouteData(queryClient, item.href)}
               onMouseEnter={() => prefetchRouteData(queryClient, item.href)}
               className={cn(
-                "group flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold text-slate-600 transition-[background-color,color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:bg-slate-100/80 hover:text-slate-950",
+                "group flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold text-slate-600 transition-[background-color,color,box-shadow] duration-150 ease-out hover:bg-slate-100/80 hover:text-slate-950",
                 active && "shadow-[0_10px_24px_rgba(15,118,110,0.16)]",
               )}
               style={
@@ -52,7 +52,7 @@ export function AppSidebar() {
               }
             >
               <Icon
-                className="h-5 w-5 text-slate-400 transition-colors duration-200 group-hover:text-teal-600"
+                className="h-5 w-5 text-slate-400 transition-colors duration-150 group-hover:text-teal-600"
                 style={active ? { color: "#ccfbf1" } : undefined}
                 aria-hidden="true"
               />

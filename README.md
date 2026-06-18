@@ -37,6 +37,9 @@
 - Toast 提示
 - 删除确认弹窗
 - 私人访问密码登录
+- 沉浸式阅读与内容编辑
+- 移动端 WebView 安全区适配
+- Android WebView 壳打包
 
 ## 页面
 
@@ -116,6 +119,56 @@ npm run dev
 
 打开 http://localhost:3000 查看应用。
 
+## 部署到新加坡 VPS
+
+仓库内提供了一套自托管部署文件：
+
+- `Dockerfile`：构建 Next.js 应用镜像
+- `docker-compose.yml`：启动 StudyTrack 和 PostgreSQL
+- `.env.production.example`：生产环境变量模板
+- `deploy/nginx.studytrack.conf`：Nginx 反向代理模板
+- `DEPLOY_ALIYUN_VPS.md`：阿里云域名 + VPS 的详细部署步骤
+
+生产环境准备：
+
+```bash
+cp .env.production.example .env
+```
+
+然后修改 `.env`：
+
+```bash
+POSTGRES_PASSWORD="your-postgres-password"
+APP_PASSWORD="your-login-password"
+AUTH_SECRET="your-long-random-secret"
+COOKIE_SECURE="true"
+```
+
+启动：
+
+```bash
+docker compose up -d --build
+```
+
+首次启动会自动执行：
+
+```bash
+npx prisma migrate deploy
+npm run prisma:seed
+```
+
+当前线上域名：
+
+```text
+https://anthropicfable5.fun
+```
+
+如果服务器已经使用 Nginx Proxy Manager 占用 80/443，可以在代理管理器中把域名转发到应用端口，例如：
+
+```text
+anthropicfable5.fun -> http://172.18.0.1:3100
+```
+
 ## 部署到 Vercel
 
 Windows 和安卓共享数据需要使用线上 Postgres，例如 Neon、Supabase 或 Vercel Marketplace 里的 Postgres 服务。
@@ -166,6 +219,55 @@ npm run railway:predeploy
 6. 在 Next.js 服务的 `Settings -> Networking` 里点击 `Generate Domain` 生成公网访问地址。
 
 Railway 会使用 `npm run build` 构建项目，并使用 `npm run start` 启动 standalone Next.js 服务。
+
+## Android App
+
+`android-webview-app` 是一个轻量 Android WebView 壳，用于把线上 StudyTrack 包成 APK。
+
+当前入口地址在：
+
+```text
+android-webview-app/app/src/main/java/com/studytrack/mobile/MainActivity.java
+```
+
+```java
+private static final String APP_URL = "https://anthropicfable5.fun";
+```
+
+构建 debug APK：
+
+```bash
+cd android-webview-app
+gradle assembleDebug
+```
+
+输出文件：
+
+```text
+android-webview-app/app/build/outputs/apk/debug/app-debug.apk
+```
+
+项目根目录也会保留一份用于安装测试：
+
+```text
+apk-output/StudyTrack-android-debug.apk
+```
+
+Android 壳做了这些移动端适配：
+
+- 使用原生容器避让顶部状态栏和底部手势区
+- WebView 启动时加载线上 HTTPS 域名
+- 禁用页面缓存，方便安装新 APK 后立即看到线上新版本
+
+## 移动端阅读体验
+
+沉浸式阅读支持：
+
+- 全屏覆盖阅读，不露出背后的页面
+- 上方功能区默认隐藏
+- 点击屏幕中间显示功能区
+- 上下滑动时自动隐藏功能区
+- 编辑和保存学习内容
 
 ## 项目结构
 

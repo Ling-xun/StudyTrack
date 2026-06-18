@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { MutableRefObject, ReactNode } from "react";
+import type { MouseEvent, MutableRefObject, ReactNode } from "react";
 import {
   AlignLeft,
   BookOpen,
@@ -248,6 +248,7 @@ function ReaderToolbar({
   showOutline,
   progressBarRef,
   progressTextRef,
+  controlsHidden,
   canEdit,
   isEditing,
   isSaving,
@@ -263,6 +264,7 @@ function ReaderToolbar({
   showOutline: boolean;
   progressBarRef: MutableRefObject<HTMLDivElement | null>;
   progressTextRef: MutableRefObject<HTMLSpanElement | null>;
+  controlsHidden: boolean;
   canEdit: boolean;
   isEditing: boolean;
   isSaving: boolean;
@@ -280,7 +282,13 @@ function ReaderToolbar({
   ];
 
   return (
-    <div className={cn("sticky top-0 z-10 border-b px-4 py-3", themeClasses[theme].toolbar)}>
+    <div
+      className={cn(
+        "absolute inset-x-0 top-0 z-20 overflow-hidden border-b px-4 shadow-[0_18px_36px_rgba(15,23,42,0.12)] transition-[max-height,opacity,padding,transform,border-color] duration-200 ease-out",
+        themeClasses[theme].toolbar,
+        controlsHidden ? "max-h-0 -translate-y-3 border-transparent py-0 opacity-0 pointer-events-none" : "max-h-56 translate-y-0 py-3 opacity-100",
+      )}
+    >
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2">
         <div className="flex items-center gap-1 rounded-lg border border-current/10 p-1">
           {themeMeta.map((item) => {
@@ -421,11 +429,14 @@ export function ImmersiveReader({
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [draftContent, setDraftContent] = useState(content);
+  const [controlsHidden, setControlsHidden] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement | null>(null);
   const progressTextRef = useRef<HTMLSpanElement | null>(null);
   const scrollFrameRef = useRef<number | null>(null);
   const progressValueRef = useRef(0);
+  const lastScrollTopRef = useRef(0);
+  const controlsHiddenRef = useRef(true);
   const blockRefs = useRef<Array<HTMLElement | null>>([]);
   const blocks = useMemo(() => parseContent(draftContent), [draftContent]);
   const readingMinutes = useMemo(() => estimateReadingMinutes(draftContent), [draftContent]);
@@ -469,6 +480,8 @@ export function ImmersiveReader({
   useEffect(() => {
     if (open) {
       updateProgress(0);
+      lastScrollTopRef.current = 0;
+      setControlsVisibility(true);
       setSaveError("");
       scrollRef.current?.scrollTo({ top: 0 });
     }
@@ -494,6 +507,15 @@ export function ImmersiveReader({
     }
   }
 
+  function setControlsVisibility(hidden: boolean) {
+    if (controlsHiddenRef.current === hidden) {
+      return;
+    }
+
+    controlsHiddenRef.current = hidden;
+    setControlsHidden(hidden);
+  }
+
   function handleScroll() {
     const container = scrollRef.current;
 
@@ -510,6 +532,11 @@ export function ImmersiveReader({
 
       const maxScroll = container.scrollHeight - container.clientHeight;
       const nextProgress = maxScroll <= 0 ? 100 : Math.min(100, Math.round((container.scrollTop / maxScroll) * 100));
+      const nextScrollTop = container.scrollTop;
+      if (!controlsHiddenRef.current) {
+        setControlsVisibility(true);
+      }
+      lastScrollTopRef.current = Math.max(0, nextScrollTop);
 
       if (nextProgress !== progressValueRef.current) {
         updateProgress(nextProgress);
@@ -525,6 +552,23 @@ export function ImmersiveReader({
     setOpen(false);
     setIsEditing(false);
     onRequestClose?.();
+  }
+
+  function revealControlsFromContent(event: MouseEvent<HTMLElement>) {
+    const target = event.target as HTMLElement | null;
+
+    if (target?.closest("button, a, input, select, [role='button']")) {
+      return;
+    }
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const tapY = event.clientY - bounds.top;
+    const middleStart = bounds.height * 0.22;
+    const middleEnd = bounds.height * 0.78;
+
+    if (tapY >= middleStart && tapY <= middleEnd) {
+      setControlsVisibility(false);
+    }
   }
 
   async function saveDraft() {
@@ -553,14 +597,15 @@ export function ImmersiveReader({
   const readerDialog =
     open && typeof document !== "undefined"
       ? createPortal(
-          <div className="fixed inset-0 z-50 bg-slate-950/60 p-0" role="dialog" aria-modal="true" aria-label="沉浸阅读">
-            <div className={cn("flex h-dvh flex-col overflow-hidden", themeClasses[theme].shell)}>
+          <div className="fixed inset-0 z-50 p-0" role="dialog" aria-modal="true" aria-label="沉浸阅读">
+            <div className={cn("relative flex h-dvh flex-col overflow-hidden", themeClasses[theme].shell)}>
               <ReaderToolbar
                 theme={theme}
                 fontSize={fontSize}
                 showOutline={showOutline}
                 progressBarRef={progressBarRef}
                 progressTextRef={progressTextRef}
+                controlsHidden={controlsHidden}
                 canEdit={editable}
                 isEditing={isEditing}
                 isSaving={isSaving}
@@ -600,6 +645,7 @@ export function ImmersiveReader({
                   className="min-h-0 overflow-y-auto px-4 py-7 sm:px-8 lg:px-12"
                   style={{ contain: "layout paint", overscrollBehavior: "contain" }}
                   onScroll={handleScroll}
+                  onClick={revealControlsFromContent}
                 >
                   <article className={cn("mx-auto pb-20", isEditing ? "max-w-5xl" : "max-w-3xl")}>
                     <div className="flex flex-wrap items-center gap-2">
@@ -625,6 +671,7 @@ export function ImmersiveReader({
                             )}
                             maxLength={50000}
                             value={draftContent}
+                            onScroll={() => setControlsVisibility(true)}
                             onChange={(event) => {
                               setDraftContent(event.target.value);
                               onContentChange?.(event.target.value);

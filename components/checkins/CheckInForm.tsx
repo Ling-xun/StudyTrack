@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { BookMarked, FolderPlus, Save } from "lucide-react";
+import { ImmersiveReader } from "@/components/checkins/ImmersiveReader";
 import { useToast } from "@/components/common/ToastProvider";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -39,6 +40,13 @@ export function CheckInForm({
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
   const isEdit = mode === "edit";
+  const [title, setTitle] = useState(initialData?.title ?? "");
+  const [categoryId, setCategoryId] = useState(initialData?.categoryId ?? categories[0]?.id ?? "");
+  const [studyDate, setStudyDate] = useState(initialData ? formatDate(initialData.studyDate) : dateInputValue());
+  const [duration, setDuration] = useState(initialData?.duration ? String(initialData.duration) : "");
+  const [mood, setMood] = useState(initialData?.mood ?? "");
+  const [content, setContent] = useState(initialData?.content ?? "");
+  const selectedCategory = categories.find((category) => category.id === categoryId) ?? categories[0];
 
   if (categories.length === 0) {
     return (
@@ -57,7 +65,37 @@ export function CheckInForm({
     );
   }
 
-  function handleSubmit(formData: FormData) {
+  function payloadWithContent(nextContent = content) {
+    return {
+      title,
+      categoryId,
+      studyDate,
+      duration,
+      mood,
+      content: nextContent,
+    };
+  }
+
+  async function saveReaderContent(nextContent: string) {
+    setContent(nextContent);
+
+    if (!isEdit) {
+      toast("已同步到表单");
+      return;
+    }
+
+    const checkIn = await requestJson<CheckInWithCategory>(`/api/checkins/${initialData?.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payloadWithContent(nextContent)),
+    });
+
+    queryClient.setQueryData(queryKeys.checkIn(checkIn.id), checkIn);
+    invalidateCheckInData(queryClient, checkIn.id);
+    toast("阅读内容已保存");
+  }
+
+  function handleSubmit() {
     setError("");
 
     startTransition(async () => {
@@ -65,14 +103,7 @@ export function CheckInForm({
         const checkIn = await requestJson<CheckInWithCategory>(isEdit ? `/api/checkins/${initialData?.id}` : "/api/checkins", {
           method: isEdit ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: formData.get("title"),
-            categoryId: formData.get("categoryId"),
-            studyDate: formData.get("studyDate"),
-            duration: formData.get("duration"),
-            mood: formData.get("mood"),
-            content: formData.get("content"),
-          }),
+          body: JSON.stringify(payloadWithContent()),
         });
 
         queryClient.setQueryData(queryKeys.checkIn(checkIn.id), checkIn);
@@ -107,15 +138,16 @@ export function CheckInForm({
               id="title"
               name="title"
               placeholder="例如 C++ 多态复习"
-              defaultValue={initialData?.title}
+              value={title}
               maxLength={50}
+              onChange={(event) => setTitle(event.target.value)}
               required
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="categoryId">分类</Label>
-            <Select id="categoryId" name="categoryId" required defaultValue={initialData?.categoryId ?? categories[0]?.id}>
+            <Select id="categoryId" name="categoryId" required value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
@@ -130,7 +162,8 @@ export function CheckInForm({
               id="studyDate"
               name="studyDate"
               type="date"
-              defaultValue={initialData ? formatDate(initialData.studyDate) : dateInputValue()}
+              value={studyDate}
+              onChange={(event) => setStudyDate(event.target.value)}
               required
             />
           </div>
@@ -145,14 +178,15 @@ export function CheckInForm({
               max={1440}
               step={1}
               placeholder="60"
-              defaultValue={initialData?.duration}
+              value={duration}
+              onChange={(event) => setDuration(event.target.value)}
               required
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="mood">学习状态</Label>
-            <Select id="mood" name="mood" defaultValue={initialData?.mood ?? ""}>
+            <Select id="mood" name="mood" value={mood} onChange={(event) => setMood(event.target.value)}>
               {moods.map((mood) => (
                 <option key={mood || "empty"} value={mood}>
                   {mood || "不填写"}
@@ -167,9 +201,21 @@ export function CheckInForm({
               id="content"
               name="content"
               placeholder="写下今天学习的知识点、练习内容或复习重点"
-              defaultValue={initialData?.content}
-              maxLength={1000}
+              value={content}
+              maxLength={50000}
+              onChange={(event) => setContent(event.target.value)}
               required
+            />
+            <ImmersiveReader
+              title={title}
+              content={content}
+              categoryName={selectedCategory?.name ?? "未分类"}
+              categoryColor={selectedCategory?.color ?? "#0f766e"}
+              editable
+              variant="compact"
+              triggerLabel="沉浸预览与编辑"
+              onContentChange={setContent}
+              onSaveContent={saveReaderContent}
             />
           </div>
         </div>

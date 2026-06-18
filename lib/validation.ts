@@ -56,8 +56,8 @@ export async function validateCheckInPayload(body: CheckInPayload) {
     return { message: "学习内容不能为空" };
   }
 
-  if (content.length > 1000) {
-    return { message: "学习内容不能超过 1000 个字符" };
+  if (content.length > 50000) {
+    return { message: "学习内容不能超过 50000 个字符" };
   }
 
   const parsedDate = parseStudyDate(studyDate);

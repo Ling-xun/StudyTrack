@@ -2,13 +2,17 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CalendarDays, Clock, FileText, Smile } from "lucide-react";
 import { CheckInDetailActions } from "@/components/checkins/CheckInDetailActions";
+import { ImmersiveReader } from "@/components/checkins/ImmersiveReader";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Skeleton } from "@/components/common/Skeleton";
+import { useToast } from "@/components/common/ToastProvider";
 import { CategoryIcon } from "@/lib/icons";
 import { formatDate } from "@/lib/date";
-import { useCheckIn } from "@/lib/queries";
+import { invalidateCheckInData, queryKeys, requestJson, useCheckIn } from "@/lib/queries";
+import type { CheckInWithCategory } from "@/lib/types";
 
 function DetailMetaItem({
   icon,
@@ -63,6 +67,8 @@ function DetailSkeleton() {
 }
 
 export function RecordDetailClient({ id }: { id: string }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const checkInQuery = useCheckIn(id);
   const checkIn = checkInQuery.data;
 
@@ -79,6 +85,29 @@ export function RecordDetailClient({ id }: { id: string }) {
         </div>
       </div>
     );
+  }
+
+  async function saveContent(content: string) {
+    if (!checkIn) {
+      return;
+    }
+
+    const updatedCheckIn = await requestJson<CheckInWithCategory>(`/api/checkins/${checkIn.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: checkIn.title,
+        categoryId: checkIn.categoryId,
+        studyDate: formatDate(checkIn.studyDate),
+        duration: checkIn.duration,
+        mood: checkIn.mood ?? "",
+        content,
+      }),
+    });
+
+    queryClient.setQueryData(queryKeys.checkIn(checkIn.id), updatedCheckIn);
+    invalidateCheckInData(queryClient, checkIn.id);
+    toast("阅读内容已保存");
   }
 
   return (
@@ -115,12 +144,14 @@ export function RecordDetailClient({ id }: { id: string }) {
           </div>
         </header>
 
-        <section className="p-5 sm:p-6">
-          <h2 className="text-sm font-bold text-teal-700">完整学习内容</h2>
-          <div className="checkin-content-detail mt-4 text-base leading-[1.8] text-slate-700">
-            {checkIn.content}
-          </div>
-        </section>
+        <ImmersiveReader
+          title={checkIn.title}
+          content={checkIn.content}
+          categoryName={checkIn.category.name}
+          categoryColor={checkIn.category.color}
+          editable
+          onSaveContent={saveContent}
+        />
       </article>
 
       <CheckInDetailActions checkInId={checkIn.id} />

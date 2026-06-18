@@ -2,13 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { BookMarked, FolderPlus, Save } from "lucide-react";
 import { useToast } from "@/components/common/ToastProvider";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FieldError, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { dateInputValue, formatDate } from "@/lib/date";
-import type { CategorySummary } from "@/lib/types";
+import { invalidateCheckInData, queryKeys, requestJson } from "@/lib/queries";
+import type { CategorySummary, CheckInWithCategory } from "@/lib/types";
 
 const moods = ["", "轻松", "一般", "困难", "状态不错", "有点吃力"];
 
@@ -32,6 +34,7 @@ export function CheckInForm({
   mode?: "create" | "edit";
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -58,28 +61,28 @@ export function CheckInForm({
     setError("");
 
     startTransition(async () => {
-      const response = await fetch(isEdit ? `/api/checkins/${initialData?.id}` : "/api/checkins", {
-        method: isEdit ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: formData.get("title"),
-          categoryId: formData.get("categoryId"),
-          studyDate: formData.get("studyDate"),
-          duration: formData.get("duration"),
-          mood: formData.get("mood"),
-          content: formData.get("content"),
-        }),
-      });
+      try {
+        const checkIn = await requestJson<CheckInWithCategory>(isEdit ? `/api/checkins/${initialData?.id}` : "/api/checkins", {
+          method: isEdit ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: formData.get("title"),
+            categoryId: formData.get("categoryId"),
+            studyDate: formData.get("studyDate"),
+            duration: formData.get("duration"),
+            mood: formData.get("mood"),
+            content: formData.get("content"),
+          }),
+        });
 
-      if (!response.ok) {
-        const payload = (await response.json()) as { message?: string };
-        setError(payload.message ?? (isEdit ? "更新学习记录失败" : "创建学习记录失败"));
+        queryClient.setQueryData(queryKeys.checkIn(checkIn.id), checkIn);
+        invalidateCheckInData(queryClient, checkIn.id);
+        toast(isEdit ? "更新成功" : "创建成功");
+        router.push("/checkins");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : isEdit ? "更新学习记录失败" : "创建学习记录失败");
         return;
       }
-
-      toast(isEdit ? "更新成功" : "创建成功");
-      router.push("/checkins");
-      router.refresh();
     });
   }
 

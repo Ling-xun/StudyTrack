@@ -12,6 +12,10 @@ export async function GET(request: Request) {
   const keyword = searchParams.get("keyword")?.trim();
   const categoryId = searchParams.get("categoryId")?.trim();
   const date = searchParams.get("date")?.trim();
+  const parsedLimit = Number(searchParams.get("limit") ?? 20);
+  const parsedOffset = Number(searchParams.get("offset") ?? 0);
+  const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(Math.floor(parsedLimit), 1), 50) : 20;
+  const offset = Number.isFinite(parsedOffset) ? Math.max(Math.floor(parsedOffset), 0) : 0;
   const where: Prisma.CheckInWhereInput = {};
 
   if (keyword) {
@@ -32,13 +36,41 @@ export async function GET(request: Request) {
     where.studyDate = parsedDate;
   }
 
-  const checkIns = await prisma.checkIn.findMany({
-    where,
-    include: { category: true },
-    orderBy: [{ studyDate: "desc" }, { createdAt: "desc" }],
-  });
+  const [checkIns, total] = await Promise.all([
+    prisma.checkIn.findMany({
+      where,
+      skip: offset,
+      take: limit,
+      select: {
+        id: true,
+        title: true,
+        studyDate: true,
+        duration: true,
+        mood: true,
+        categoryId: true,
+        createdAt: true,
+        updatedAt: true,
+        category: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            icon: true,
+          },
+        },
+      },
+      orderBy: [{ studyDate: "desc" }, { createdAt: "desc" }],
+    }),
+    prisma.checkIn.count({ where }),
+  ]);
 
-  return NextResponse.json(checkIns);
+  return NextResponse.json({
+    items: checkIns,
+    total,
+    limit,
+    offset,
+    nextOffset: offset + checkIns.length < total ? offset + checkIns.length : null,
+  });
 }
 
 export async function POST(request: Request) {
@@ -52,6 +84,7 @@ export async function POST(request: Request) {
 
     const checkIn = await prisma.checkIn.create({
       data: result.data,
+      include: { category: true },
     });
 
     return NextResponse.json(checkIn, { status: 201 });

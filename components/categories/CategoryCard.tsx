@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Pencil, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { useToast } from "@/components/common/ToastProvider";
@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Input, Label, Select } from "@/components/ui/form";
 import { CategoryIcon } from "@/lib/icons";
 import { iconOptions } from "@/lib/icons";
+import { invalidateCategoryData } from "@/lib/queries";
 import type { CategorySummary } from "@/lib/types";
 
 const colorOptions = ["#3B82F6", "#8B5CF6", "#F97316", "#22C55E", "#EC4899", "#14B8A6", "#64748B"];
@@ -21,7 +22,7 @@ export function CategoryCard({
   category: CategorySummary;
   count?: number;
 }) {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -49,7 +50,7 @@ export function CategoryCard({
 
       setEditOpen(false);
       toast("更新成功");
-      router.refresh();
+      invalidateCategoryData(queryClient);
     });
   }
 
@@ -68,7 +69,7 @@ export function CategoryCard({
 
       setDeleteOpen(false);
       toast(payload.message ?? "删除成功");
-      router.refresh();
+      invalidateCategoryData(queryClient);
     });
   }
 

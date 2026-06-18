@@ -35,3 +35,43 @@ textarea {
 ::selection {
   background: rgba(20, 184, 166, 0.22);
 }
+
+.checkin-content-summary {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.checkin-content-detail {
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.page-transition {
+  animation: page-enter 150ms ease-out both;
+  will-change: opacity, transform;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0.72;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-transition {
+    animation: none;
+  }
+}

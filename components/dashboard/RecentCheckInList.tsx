@@ -3,9 +3,9 @@ import { Card } from "@/components/ui/card";
 import { ButtonLink } from "@/components/ui/button";
 import { CategoryIcon } from "@/lib/icons";
 import { formatDate } from "@/lib/date";
-import type { CheckInWithCategory } from "@/lib/types";
+import type { CheckInListItem } from "@/lib/types";
 
-export function RecentCheckInList({ checkIns }: { checkIns: CheckInWithCategory[] }) {
+export function RecentCheckInList({ checkIns }: { checkIns: CheckInListItem[] }) {
   if (checkIns.length === 0) {
     return (
       <Card className="flex min-h-72 flex-col items-center justify-center text-center">

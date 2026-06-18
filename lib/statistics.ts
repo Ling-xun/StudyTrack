@@ -1,9 +1,12 @@
 import dayjs from "dayjs";
-import { formatDate } from "@/lib/date";
+import { formatDate, isThisWeek, isToday } from "@/lib/date";
 import type { CheckInWithCategory } from "@/lib/types";
 
 export type StudyStatistics = {
   totalDuration: number;
+  todayMinutes: number;
+  weekMinutes: number;
+  checkedToday: boolean;
   totalCheckInDays: number;
   totalCheckInCount: number;
   averageDurationPerDay: number;
@@ -31,6 +34,12 @@ export type StudyStatistics = {
 };
 
 export function calculateStudyStatistics(checkIns: CheckInWithCategory[]): StudyStatistics {
+  const todayMinutes = checkIns
+    .filter((checkIn) => isToday(checkIn.studyDate))
+    .reduce((sum, checkIn) => sum + checkIn.duration, 0);
+  const weekMinutes = checkIns
+    .filter((checkIn) => isThisWeek(checkIn.studyDate))
+    .reduce((sum, checkIn) => sum + checkIn.duration, 0);
   const totalDuration = checkIns.reduce((sum, checkIn) => sum + checkIn.duration, 0);
   const totalCheckInDays = new Set(checkIns.map((checkIn) => formatDate(checkIn.studyDate))).size;
   const totalCheckInCount = checkIns.length;
@@ -92,6 +101,9 @@ export function calculateStudyStatistics(checkIns: CheckInWithCategory[]): Study
 
   return {
     totalDuration,
+    todayMinutes,
+    weekMinutes,
+    checkedToday: todayMinutes > 0,
     totalCheckInDays,
     totalCheckInCount,
     averageDurationPerDay,

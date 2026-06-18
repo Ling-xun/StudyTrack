@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { GraduationCap, Sparkles } from "lucide-react";
 import { navItems } from "@/components/layout/navItems";
+import { prefetchRouteData } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const queryClient = useQueryClient();
 
   return (
     <aside className="sticky top-0 hidden h-screen border-r border-white/80 bg-white/80 px-5 py-6 shadow-[12px_0_45px_rgba(15,23,42,0.05)] backdrop-blur-xl lg:block">
@@ -33,6 +36,8 @@ export function AppSidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onFocus={() => prefetchRouteData(queryClient, item.href)}
+              onMouseEnter={() => prefetchRouteData(queryClient, item.href)}
               className={cn(
                 "group flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-100/80 hover:text-slate-950",
                 active && "shadow-[0_10px_24px_rgba(15,118,110,0.16)]",

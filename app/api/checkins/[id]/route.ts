@@ -48,6 +48,7 @@ export async function PUT(request: Request, context: RouteContext) {
     const checkIn = await prisma.checkIn.update({
       where: { id },
       data: result.data,
+      include: { category: true },
     });
 
     return NextResponse.json(checkIn);

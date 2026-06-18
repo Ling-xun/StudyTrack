@@ -5,7 +5,24 @@ import type { CheckInWithCategory } from "@/lib/types";
 
 export async function GET() {
   const checkIns = (await prisma.checkIn.findMany({
-    include: { category: true },
+    select: {
+      id: true,
+      title: true,
+      studyDate: true,
+      duration: true,
+      mood: true,
+      categoryId: true,
+      createdAt: true,
+      updatedAt: true,
+      category: {
+        select: {
+          id: true,
+          name: true,
+          color: true,
+          icon: true,
+        },
+      },
+    },
     orderBy: [{ studyDate: "desc" }, { createdAt: "desc" }],
   })) as CheckInWithCategory[];
 

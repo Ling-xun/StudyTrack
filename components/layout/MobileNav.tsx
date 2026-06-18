@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { navItems } from "@/components/layout/navItems";
+import { prefetchRouteData } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
 export function MobileNav() {
   const pathname = usePathname();
+  const queryClient = useQueryClient();
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-white/80 bg-white/95 px-2 py-2 shadow-[0_-16px_35px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:hidden">
@@ -18,6 +21,9 @@ export function MobileNav() {
           <Link
             key={item.href}
             href={item.href}
+            onFocus={() => prefetchRouteData(queryClient, item.href)}
+            onMouseEnter={() => prefetchRouteData(queryClient, item.href)}
+            onTouchStart={() => prefetchRouteData(queryClient, item.href)}
             className={cn(
               "flex h-14 flex-col items-center justify-center gap-1 rounded-lg text-xs font-semibold text-slate-500 transition",
               active && "shadow-sm",

@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { createSessionToken, getAppPassword, SESSION_COOKIE_NAME, SESSION_TTL_SECONDS } from "@/lib/auth";
+import {
+  createSessionToken,
+  getAppPassword,
+  SESSION_COOKIE_NAME,
+  SESSION_TTL_SECONDS,
+  shouldUseSecureCookie,
+} from "@/lib/auth";
 
 type LoginPayload = {
   password?: string;
@@ -26,7 +32,7 @@ export async function POST(request: Request) {
     maxAge: SESSION_TTL_SECONDS,
     path: "/",
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookie(),
   });
 
   return response;

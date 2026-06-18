@@ -67,3 +67,7 @@ export async function isValidSessionToken(token?: string) {
 export function getAppPassword() {
   return process.env.APP_PASSWORD?.trim();
 }
+
+export function shouldUseSecureCookie() {
+  return process.env.NODE_ENV === "production" && process.env.COOKIE_SECURE !== "false";
+}

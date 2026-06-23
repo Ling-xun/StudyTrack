@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { GraduationCap, Sparkles } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import { navItems } from "@/components/layout/navItems";
 import { prefetchRouteData } from "@/lib/queries";
 import { cn } from "@/lib/utils";
@@ -61,14 +61,6 @@ export function AppSidebar() {
           );
         })}
       </nav>
-
-      <div className="absolute inset-x-5 bottom-6 rounded-lg border border-teal-100 bg-teal-50/80 p-4">
-        <div className="flex items-center gap-2 text-sm font-bold text-teal-900">
-          <Sparkles className="h-4 w-4" aria-hidden="true" />
-          V1 学习空间
-        </div>
-        <p className="mt-2 text-xs leading-5 text-teal-800/75">分类、打卡和首页概览已经连成闭环。</p>
-      </div>
     </aside>
   );
 }

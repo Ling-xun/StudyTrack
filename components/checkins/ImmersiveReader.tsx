@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { MouseEvent, MutableRefObject, ReactNode } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   AlignLeft,
   BookOpen,
@@ -85,17 +87,9 @@ function parseContent(content: string): ContentBlock[] {
 
   function pushTextBlocks(text: string) {
     text
-      .split(/\n{2,}|\r\n{2,}/)
+      .split(/(?:\r?\n){2,}/)
       .map((block) => block.trim())
       .filter(Boolean)
-      .flatMap((block) => {
-        const lines = block
-          .split(/\r?\n/)
-          .map((line) => line.trim())
-          .filter(Boolean);
-
-        return lines.length > 1 ? lines : [block];
-      })
       .forEach((textBlock) => blocks.push({ type: "paragraph", text: textBlock }));
   }
 
@@ -122,22 +116,6 @@ function estimateReadingMinutes(content: string) {
 function blockTitle(block: ContentBlock, index: number) {
   const text = block.type === "code" ? `${block.language} 代码` : block.text.replace(/\s+/g, " ").trim();
   return text.length > 26 ? `${text.slice(0, 26)}...` : text || `第 ${index + 1} 段`;
-}
-
-function renderInlineText(text: string) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-
-  return parts.map((part, index) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return (
-        <strong key={index} className="font-bold">
-          {part.slice(2, -2)}
-        </strong>
-      );
-    }
-
-    return <span key={index}>{part}</span>;
-  });
 }
 
 function renderHighlightedLine(line: string, lineIndex: number) {
@@ -198,6 +176,58 @@ function CodeBlock({ block, theme }: { block: Extract<ContentBlock, { type: "cod
   );
 }
 
+function MarkdownBlock({ content, theme }: { content: string; theme: ReaderTheme }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        h1: ({ children }) => <h2 className="mb-4 mt-9 text-2xl font-bold leading-tight first:mt-0 sm:text-3xl">{children}</h2>,
+        h2: ({ children }) => <h3 className="mb-3 mt-8 text-xl font-bold leading-tight first:mt-0 sm:text-2xl">{children}</h3>,
+        h3: ({ children }) => <h4 className="mb-3 mt-7 text-lg font-bold leading-tight first:mt-0 sm:text-xl">{children}</h4>,
+        h4: ({ children }) => <h5 className="mb-2 mt-6 font-bold leading-tight first:mt-0">{children}</h5>,
+        h5: ({ children }) => <h6 className="mb-2 mt-5 font-bold leading-tight first:mt-0">{children}</h6>,
+        h6: ({ children }) => <h6 className="mb-2 mt-5 text-sm font-bold uppercase tracking-wide first:mt-0">{children}</h6>,
+        p: ({ children }) => <p className="my-4 first:mt-0 last:mb-0">{children}</p>,
+        strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+        em: ({ children }) => <em className="italic">{children}</em>,
+        del: ({ children }) => <del className="opacity-65">{children}</del>,
+        ul: ({ children }) => <ul className="my-4 list-disc space-y-2 pl-7 marker:text-teal-600">{children}</ul>,
+        ol: ({ children }) => <ol className="my-4 list-decimal space-y-2 pl-7 marker:font-bold marker:text-teal-600">{children}</ol>,
+        li: ({ children }) => <li className="pl-1">{children}</li>,
+        blockquote: ({ children }) => (
+          <blockquote className="my-5 border-l-4 border-teal-600 bg-current/[0.045] px-5 py-2 italic">{children}</blockquote>
+        ),
+        hr: () => <hr className="my-9 border-0 border-t border-current/25" />,
+        a: ({ href, children }) => (
+          <a className="font-semibold text-teal-700 underline decoration-teal-500/40 underline-offset-4 hover:decoration-teal-600 dark:text-teal-300" href={href} target="_blank" rel="noreferrer">
+            {children}
+          </a>
+        ),
+        img: ({ src, alt }) => <img className="my-6 max-h-[70dvh] max-w-full rounded-lg object-contain shadow-sm" src={src} alt={alt ?? ""} loading="lazy" />,
+        table: ({ children }) => <table className="my-6 block w-full overflow-x-auto border-collapse text-left text-[0.92em]">{children}</table>,
+        thead: ({ children }) => <thead className="border-b-2 border-current/30 bg-current/[0.045]">{children}</thead>,
+        tr: ({ children }) => <tr className="border-b border-current/15">{children}</tr>,
+        th: ({ children }) => <th className="whitespace-nowrap px-4 py-2 font-bold">{children}</th>,
+        td: ({ children }) => <td className="px-4 py-2 align-top">{children}</td>,
+        input: (props) => <input {...props} className="mr-2 accent-teal-600" disabled />,
+        pre: ({ children }) => <>{children}</>,
+        code: ({ className, children }) => {
+          const language = /language-([\w+-]+)/.exec(className ?? "")?.[1];
+          const code = String(children).replace(/\n$/, "");
+
+          if (language) {
+            return <CodeBlock block={{ type: "code", language, code }} theme={theme} />;
+          }
+
+          return <code className="rounded bg-current/10 px-1.5 py-0.5 font-mono text-[0.9em]">{children}</code>;
+        },
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+}
+
 function ReaderContent({
   blocks,
   theme,
@@ -225,7 +255,7 @@ function ReaderContent({
             <CodeBlock block={block} theme={theme} />
           </div>
         ) : (
-          <p
+          <div
             key={`paragraph-${index}`}
             ref={(node) => {
               if (blockRefs) {
@@ -234,8 +264,8 @@ function ReaderContent({
             }}
             className="scroll-mt-8"
           >
-            {renderInlineText(block.text)}
-          </p>
+            <MarkdownBlock content={block.text} theme={theme} />
+          </div>
         ),
       )}
     </div>

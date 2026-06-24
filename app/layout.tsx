@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ToastProvider } from "@/components/common/ToastProvider";
 import { AppShell } from "@/components/layout/AppShell";
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import "katex/dist/katex.min.css";
 import "./globals.css";
 
 export const metadata: Metadata = {

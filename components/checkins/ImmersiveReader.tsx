@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { MouseEvent, MutableRefObject, ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
+import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import {
   AlignLeft,
   BookOpen,
@@ -176,11 +178,24 @@ function CodeBlock({ block, theme }: { block: Extract<ContentBlock, { type: "cod
   );
 }
 
+/**
+ * remark-math uses dollar delimiters, while copied formulas (especially from
+ * ChatGPT and many document editors) commonly use LaTeX's \(...\) and \[...\].
+ * Convert those delimiters without touching the formula body itself.
+ */
+function normalizeMathDelimiters(content: string) {
+  return content
+    .replace(/\\\[([\s\S]*?)\\\]/g, (_match, formula: string) => `\n$$\n${formula.trim()}\n$$\n`)
+    .replace(/\\\(([\s\S]*?)\\\)/g, (_match, formula: string) => `$${formula.trim()}$`);
+}
+
 function MarkdownBlock({ content, theme }: { content: string; theme: ReaderTheme }) {
   return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      components={{
+    <div className="immersive-markdown">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[[rehypeKatex, { strict: false, throwOnError: false }]]}
+        components={{
         h1: ({ children }) => <h2 className="mb-4 mt-9 text-2xl font-bold leading-tight first:mt-0 sm:text-3xl">{children}</h2>,
         h2: ({ children }) => <h3 className="mb-3 mt-8 text-xl font-bold leading-tight first:mt-0 sm:text-2xl">{children}</h3>,
         h3: ({ children }) => <h4 className="mb-3 mt-7 text-lg font-bold leading-tight first:mt-0 sm:text-xl">{children}</h4>,
@@ -221,10 +236,11 @@ function MarkdownBlock({ content, theme }: { content: string; theme: ReaderTheme
 
           return <code className="rounded bg-current/10 px-1.5 py-0.5 font-mono text-[0.9em]">{children}</code>;
         },
-      }}
-    >
-      {content}
-    </ReactMarkdown>
+        }}
+      >
+        {normalizeMathDelimiters(content)}
+      </ReactMarkdown>
+    </div>
   );
 }
 

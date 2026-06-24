@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { normalizeMarkdownMath } from "@/lib/markdown-math";
 import { cn } from "@/lib/utils";
 
 type ReaderTheme = "paper" | "light" | "dark";
@@ -178,17 +179,6 @@ function CodeBlock({ block, theme }: { block: Extract<ContentBlock, { type: "cod
   );
 }
 
-/**
- * remark-math uses dollar delimiters, while copied formulas (especially from
- * ChatGPT and many document editors) commonly use LaTeX's \(...\) and \[...\].
- * Convert those delimiters without touching the formula body itself.
- */
-function normalizeMathDelimiters(content: string) {
-  return content
-    .replace(/\\\[([\s\S]*?)\\\]/g, (_match, formula: string) => `\n$$\n${formula.trim()}\n$$\n`)
-    .replace(/\\\(([\s\S]*?)\\\)/g, (_match, formula: string) => `$${formula.trim()}$`);
-}
-
 function MarkdownBlock({ content, theme }: { content: string; theme: ReaderTheme }) {
   return (
     <div className="immersive-markdown">
@@ -238,7 +228,7 @@ function MarkdownBlock({ content, theme }: { content: string; theme: ReaderTheme
         },
         }}
       >
-        {normalizeMathDelimiters(content)}
+        {normalizeMarkdownMath(content)}
       </ReactMarkdown>
     </div>
   );

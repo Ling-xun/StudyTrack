@@ -1,6 +1,6 @@
-# 阿里云域名 + 新加坡 VPS 部署指南
+# 域名 + VPS 部署指南
 
-这份指南用于把 StudyTrack 部署到一台新加坡 VPS，并通过你的阿里云域名访问。
+这份指南用于把 StudyTrack 部署到 VPS，并通过你自己的域名访问。
 
 ## 1. 在阿里云添加域名解析
 
@@ -9,7 +9,7 @@
 ```text
 记录类型: A
 主机记录: @
-记录值: 141.98.199.115
+记录值: YOUR_VPS_IP
 ```
 
 如果也想使用 `www`：
@@ -17,7 +17,7 @@
 ```text
 记录类型: CNAME
 主机记录: www
-记录值: anthropicfable5.fun
+记录值: your-domain.example
 ```
 
 也可以把 `www` 配成 A 记录，直接指向同一个 VPS IP。
@@ -107,7 +107,7 @@ sudo nano /etc/nginx/sites-available/studytrack.conf
 这里已经替换成你的域名：
 
 ```text
-anthropicfable5.fun www.anthropicfable5.fun
+your-domain.example www.your-domain.example
 ```
 
 启用站点：
@@ -121,7 +121,7 @@ sudo systemctl reload nginx
 现在可以先访问：
 
 ```text
-http://anthropicfable5.fun
+http://your-domain.example
 ```
 
 ## 7. 开启 HTTPS
@@ -129,19 +129,19 @@ http://anthropicfable5.fun
 等阿里云 DNS 已经指向 VPS 后执行：
 
 ```bash
-sudo certbot --nginx -d anthropicfable5.fun -d www.anthropicfable5.fun
+sudo certbot --nginx -d your-domain.example -d www.your-domain.example
 ```
 
 如果你只解析了根域名，就只写一个：
 
 ```bash
-sudo certbot --nginx -d anthropicfable5.fun
+sudo certbot --nginx -d your-domain.example
 ```
 
 完成后访问：
 
 ```text
-https://anthropicfable5.fun
+https://your-domain.example
 ```
 
 ## 8. 后续更新应用
@@ -178,13 +178,13 @@ android-webview-app/app/src/main/java/com/studytrack/mobile/MainActivity.java
 把这一行：
 
 ```java
-private static final String APP_URL = "http://141.98.199.115:3100";
+private static final String APP_URL = "http://YOUR_VPS_IP:3100";
 ```
 
 改成你的 HTTPS 域名：
 
 ```java
-private static final String APP_URL = "https://anthropicfable5.fun";
+private static final String APP_URL = "https://your-domain.example";
 ```
 
 然后重新构建 APK。这样手机打开的就是域名版本，而不是旧 IP。

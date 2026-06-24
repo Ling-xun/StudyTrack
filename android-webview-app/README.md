@@ -2,10 +2,10 @@
 
 This is a small Android WebView wrapper for the hosted StudyTrack app.
 
-Server URL:
+Configure the private server URL in `local.properties` (this file is ignored by Git):
 
 ```text
-https://anthropicfable5.fun
+studytrack.app.url=https://your-domain.example
 ```
 
 Build a debug APK:

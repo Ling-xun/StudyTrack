@@ -175,47 +175,10 @@ npx prisma migrate deploy
 npm run prisma:seed
 ```
 
-当前线上域名：
-
-```text
-https://anthropicfable5.fun
-```
-
 如果服务器已经使用 Nginx Proxy Manager 占用 80/443，可以在代理管理器中把域名转发到应用端口，例如：
 
 ```text
-anthropicfable5.fun -> http://172.18.0.1:3100
-```
-
-## 部署到 Vercel
-
-Windows 和安卓共享数据需要使用线上 Postgres，例如 Neon、Supabase 或 Vercel Marketplace 里的 Postgres 服务。
-
-部署时在 Vercel Project Settings 的 Environment Variables 里配置：
-
-- `DATABASE_URL`：线上 Postgres 连接字符串
-- `APP_PASSWORD`：你的私人访问密码
-- `AUTH_SECRET`：较长随机字符串
-- `AI_API_KEY`：AI 服务密钥
-- `AI_BASE_URL`：兼容接口根地址
-- `AI_MODEL`：模型名称
-- `AI_REASONING_ENABLED`：是否开启 DeepSeek 深度思考
-
-Vercel 的 Build Command 建议设置为：
-
-```bash
-npm run vercel-build
-```
-
-这个命令会自动创建数据库表、写入默认分类，然后构建应用。
-
-环境变量保存后，需要重新部署才会生效。
-
-第一次连接线上数据库后，运行：
-
-```bash
-npm run prisma:deploy
-npm run prisma:seed
+your-domain.example -> http://127.0.0.1:3100
 ```
 
 ## 部署到 Railway
@@ -253,7 +216,7 @@ android-webview-app/app/src/main/java/com/studytrack/mobile/MainActivity.java
 ```
 
 ```java
-private static final String APP_URL = "https://anthropicfable5.fun";
+private static final String APP_URL = "https://your-domain.example";
 ```
 
 构建 debug APK：

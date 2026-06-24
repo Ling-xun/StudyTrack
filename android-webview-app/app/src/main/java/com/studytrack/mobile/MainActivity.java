@@ -19,7 +19,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 public class MainActivity extends Activity {
-    private static final String APP_URL = "https://anthropicfable5.fun";
+    private static final String APP_URL = BuildConfig.APP_URL;
     private WebView webView;
     private FrameLayout rootLayout;
 

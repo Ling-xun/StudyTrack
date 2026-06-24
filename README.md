@@ -79,6 +79,7 @@ AUTH_SECRET="change-this-long-random-secret"
 AI_API_KEY="your-ai-api-key"
 AI_BASE_URL="https://api.openai.com/v1"
 AI_MODEL="gpt-4.1-mini"
+AI_REASONING_ENABLED="false"
 ```
 
 - `APP_PASSWORD`：登录 StudyTrack 的访问密码。
@@ -86,6 +87,7 @@ AI_MODEL="gpt-4.1-mini"
 - `AI_API_KEY`：OpenAI-compatible 服务密钥，仅由服务端读取。
 - `AI_BASE_URL`：兼容 Chat Completions 的 API 根地址，例如 `https://api.openai.com/v1`。
 - `AI_MODEL`：需要调用的模型名称。
+- `AI_REASONING_ENABLED`：设为 `true` 时显式开启 DeepSeek thinking，并使用 `high` 推理强度。
 - 本地测试时，当前 `.env` 里的默认登录密码是 `123456`。
 
 ## 本地运行
@@ -190,6 +192,7 @@ Windows 和安卓共享数据需要使用线上 Postgres，例如 Neon、Supabas
 - `AI_API_KEY`：AI 服务密钥
 - `AI_BASE_URL`：兼容接口根地址
 - `AI_MODEL`：模型名称
+- `AI_REASONING_ENABLED`：是否开启 DeepSeek 深度思考
 
 Vercel 的 Build Command 建议设置为：
 

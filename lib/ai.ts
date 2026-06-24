@@ -203,19 +203,32 @@ export function isAiConfigured() {
   );
 }
 
+function isReasoningEnabled() {
+  return process.env.AI_REASONING_ENABLED?.trim().toLowerCase() === "true";
+}
+
 export async function requestAiCompletion(payload: AiChatPayload, context: string) {
   const apiKey = process.env.AI_API_KEY?.trim();
   const baseUrl = process.env.AI_BASE_URL?.trim();
   const model = process.env.AI_MODEL?.trim();
   if (!apiKey || !baseUrl || !model) throw new Error("AI_NOT_CONFIGURED");
+  const reasoningEnabled = isReasoningEnabled();
 
   const response = await fetch(chatCompletionsUrl(baseUrl), {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model,
-      temperature: 0.45,
-      max_tokens: 1_200,
+      ...(reasoningEnabled
+        ? {
+            thinking: { type: "enabled" },
+            reasoning_effort: "high",
+            max_tokens: 4_096,
+          }
+        : {
+            temperature: 0.45,
+            max_tokens: 1_200,
+          }),
       messages: [
         {
           role: "system",

@@ -23,19 +23,25 @@ function wrapExpression(value: string) {
 }
 
 function normalizeUndelimitedMath(line: string) {
-  const withParenthesizedMath = line.replace(
-    /\([^()\n]*\\[A-Za-z]+[^()\n]*\)/g,
-    (expression) => (looksLikeUndelimitedMath(expression) ? `$${expression}$` : expression),
-  );
+  function normalizeParenthesizedMath(value: string) {
+    return value.replace(
+      /\([^()\n]*\\[A-Za-z]+[^()\n]*\)/g,
+      (expression) => (looksLikeUndelimitedMath(expression) ? `$${expression}$` : expression),
+    );
+  }
 
-  if (withParenthesizedMath.includes("|")) {
-    return withParenthesizedMath
+  if (line.includes("|")) {
+    return line
       .split("|")
-      .map((cell) => wrapExpression(cell))
+      .map((cell) => {
+        const wrappedCell = wrapExpression(cell);
+        return wrappedCell === cell ? normalizeParenthesizedMath(cell) : wrappedCell;
+      })
       .join("|");
   }
 
-  return wrapExpression(withParenthesizedMath);
+  const wrappedLine = wrapExpression(line);
+  return wrappedLine === line ? normalizeParenthesizedMath(line) : wrappedLine;
 }
 
 /**
@@ -50,6 +56,11 @@ export function normalizeMarkdownMath(content: string) {
       index % 2 === 1
         ? segment
         : segment
+            .replace(
+              /^[\t ]*\[[\t ]*\r?\n([\s\S]*?)\r?\n[\t ]*\][\t ]*$/gm,
+              (match, formula: string) =>
+                looksLikeUndelimitedMath(formula) ? `\n$$\n${formula.trim()}\n$$\n` : match,
+            )
             .replace(/\\\[([\s\S]*?)\\\]/g, (_match, formula: string) => `\n$$\n${formula.trim()}\n$$\n`)
             .replace(/\\\(([\s\S]*?)\\\)/g, (_match, formula: string) => `$${formula.trim()}$`),
     )

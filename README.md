@@ -41,6 +41,7 @@
 - 移动端 WebView 安全区适配
 - Android WebView 壳打包
 - AI 学习助手：按记录、分类、近期天数、日期范围或全部记录进行总结与复盘
+- AI 历史：保存总结与多轮对话，支持继续追问、复制和删除
 
 ## 页面
 
@@ -69,6 +70,12 @@
 - `POST /api/login`
 - `POST /api/logout`
 - `POST /api/ai/chat`
+- `GET /api/ai/summaries`
+- `GET /api/ai/summaries/[id]`
+- `DELETE /api/ai/summaries/[id]`
+- `GET /api/ai/conversations`
+- `GET /api/ai/conversations/[id]`
+- `DELETE /api/ai/conversations/[id]`
 
 ## 环境变量
 

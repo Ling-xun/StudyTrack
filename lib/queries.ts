@@ -183,6 +183,18 @@ export function prefetchRouteData(queryClient: QueryClient, href: string) {
       queryKey: queryKeys.statistics,
       queryFn: () => fetchJson<StudyStatistics>("/api/statistics"),
     });
+    return;
+  }
+
+  if (href === "/ai") {
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.categories,
+      queryFn: () => fetchJson<CategoryListItem[]>("/api/categories"),
+    });
+    queryClient.prefetchQuery({
+      queryKey: queryKeys.checkIns({ limit: 50 }),
+      queryFn: () => fetchJson<PaginatedCheckIns>(checkInsUrl({ limit: 50 })),
+    });
   }
 }
 

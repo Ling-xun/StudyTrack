@@ -40,6 +40,7 @@
 - 沉浸式阅读与内容编辑
 - 移动端 WebView 安全区适配
 - Android WebView 壳打包
+- AI 学习助手：按记录、分类、近期天数、日期范围或全部记录进行总结与复盘
 
 ## 页面
 
@@ -50,6 +51,7 @@
 - `/checkins/[id]/edit` 编辑学习打卡
 - `/categories` 分类管理
 - `/statistics` 数据统计
+- `/ai` AI 学习助手
 
 ## API
 
@@ -66,6 +68,7 @@
 - `GET /api/statistics`
 - `POST /api/login`
 - `POST /api/logout`
+- `POST /api/ai/chat`
 
 ## 环境变量
 
@@ -73,10 +76,16 @@
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE?sslmode=require"
 APP_PASSWORD="change-this-password"
 AUTH_SECRET="change-this-long-random-secret"
+AI_API_KEY="your-ai-api-key"
+AI_BASE_URL="https://api.openai.com/v1"
+AI_MODEL="gpt-4.1-mini"
 ```
 
 - `APP_PASSWORD`：登录 StudyTrack 的访问密码。
 - `AUTH_SECRET`：用于签名登录状态，建议使用一串较长的随机字符。
+- `AI_API_KEY`：OpenAI-compatible 服务密钥，仅由服务端读取。
+- `AI_BASE_URL`：兼容 Chat Completions 的 API 根地址，例如 `https://api.openai.com/v1`。
+- `AI_MODEL`：需要调用的模型名称。
 - 本地测试时，当前 `.env` 里的默认登录密码是 `123456`。
 
 ## 本地运行
@@ -178,6 +187,9 @@ Windows 和安卓共享数据需要使用线上 Postgres，例如 Neon、Supabas
 - `DATABASE_URL`：线上 Postgres 连接字符串
 - `APP_PASSWORD`：你的私人访问密码
 - `AUTH_SECRET`：较长随机字符串
+- `AI_API_KEY`：AI 服务密钥
+- `AI_BASE_URL`：兼容接口根地址
+- `AI_MODEL`：模型名称
 
 Vercel 的 Build Command 建议设置为：
 

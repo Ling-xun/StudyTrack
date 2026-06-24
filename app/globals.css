@@ -53,6 +53,73 @@ textarea {
   word-break: break-word;
 }
 
+.ai-reply h1,
+.ai-reply h2,
+.ai-reply h3 {
+  margin: 1.25rem 0 0.5rem;
+  color: #0f172a;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.ai-reply h1:first-child,
+.ai-reply h2:first-child,
+.ai-reply h3:first-child,
+.ai-reply p:first-child {
+  margin-top: 0;
+}
+
+.ai-reply p,
+.ai-reply ul,
+.ai-reply ol,
+.ai-reply blockquote {
+  margin: 0.65rem 0;
+}
+
+.ai-reply ul,
+.ai-reply ol {
+  padding-left: 1.35rem;
+}
+
+.ai-reply ul {
+  list-style: disc;
+}
+
+.ai-reply ol {
+  list-style: decimal;
+}
+
+.ai-reply li + li {
+  margin-top: 0.25rem;
+}
+
+.ai-reply strong {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.ai-reply code {
+  border-radius: 0.3rem;
+  background: #f1f5f9;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.9em;
+}
+
+.ai-reply pre {
+  margin: 0.75rem 0;
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  background: #0f172a;
+  padding: 0.9rem;
+  color: #e2e8f0;
+}
+
+.ai-reply pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+
 .page-transition {
   animation: page-enter 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
   will-change: opacity, transform;

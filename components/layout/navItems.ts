@@ -1,4 +1,4 @@
-import { BarChart3, BookOpenCheck, FolderKanban, LayoutDashboard } from "lucide-react";
+import { BarChart3, BookOpenCheck, FolderKanban, LayoutDashboard, Sparkles } from "lucide-react";
 
 export const navItems = [
   {
@@ -20,5 +20,10 @@ export const navItems = [
     href: "/statistics",
     label: "统计",
     icon: BarChart3,
+  },
+  {
+    href: "/ai",
+    label: "AI 助手",
+    icon: Sparkles,
   },
 ];

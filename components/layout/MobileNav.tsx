@@ -13,7 +13,7 @@ export function MobileNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-white/80 bg-white/95 px-2 pt-2 shadow-[0_-16px_35px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-white/80 bg-white/95 px-2 pt-2 shadow-[0_-16px_35px_rgba(15,23,42,0.08)] backdrop-blur-xl lg:hidden"
       style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
     >
       {navItems.map((item) => {

@@ -12,7 +12,7 @@ export async function GET() {
     orderBy: { createdAt: "asc" },
     include: {
       _count: {
-        select: { checkIns: true },
+        select: { checkIns: { where: { isDraft: false } } },
       },
     },
   });

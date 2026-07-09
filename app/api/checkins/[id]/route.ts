@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { validateCheckInPayload, type CheckInPayload } from "@/lib/validation";
+import { validateCheckInDraftPayload, validateCheckInPayload, type CheckInPayload } from "@/lib/validation";
 
 function error(message: string, status = 400) {
   return NextResponse.json({ message }, { status });
@@ -39,7 +39,8 @@ export async function PUT(request: Request, context: RouteContext) {
     }
 
     const body = (await request.json()) as CheckInPayload;
-    const result = await validateCheckInPayload(body);
+    const isDraft = body.isDraft === true;
+    const result = isDraft ? await validateCheckInDraftPayload(body) : await validateCheckInPayload(body);
 
     if ("message" in result) {
       return error(result.message ?? "参数错误");
@@ -47,7 +48,7 @@ export async function PUT(request: Request, context: RouteContext) {
 
     const checkIn = await prisma.checkIn.update({
       where: { id },
-      data: result.data,
+      data: { ...result.data, isDraft },
       include: { category: true },
     });
 

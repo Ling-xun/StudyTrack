@@ -5,6 +5,7 @@ import type { CheckInWithCategory } from "@/lib/types";
 
 export async function GET() {
   const checkIns = (await prisma.checkIn.findMany({
+    where: { isDraft: false },
     select: {
       id: true,
       title: true,

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { parseStudyDate, validateCheckInPayload, type CheckInPayload } from "@/lib/validation";
+import { parseStudyDate, validateCheckInDraftPayload, validateCheckInPayload, type CheckInPayload } from "@/lib/validation";
 
 function error(message: string, status = 400) {
   return NextResponse.json({ message }, { status });
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   const parsedOffset = Number(searchParams.get("offset") ?? 0);
   const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(Math.floor(parsedLimit), 1), 50) : 20;
   const offset = Number.isFinite(parsedOffset) ? Math.max(Math.floor(parsedOffset), 0) : 0;
-  const where: Prisma.CheckInWhereInput = {};
+  const where: Prisma.CheckInWhereInput = { isDraft: false };
 
   if (keyword) {
     where.OR = [{ title: { contains: keyword } }, { content: { contains: keyword } }];
@@ -48,6 +48,7 @@ export async function GET(request: Request) {
         duration: true,
         mood: true,
         categoryId: true,
+        isDraft: true,
         createdAt: true,
         updatedAt: true,
         category: {
@@ -76,14 +77,15 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as CheckInPayload;
-    const result = await validateCheckInPayload(body);
+    const isDraft = body.isDraft === true;
+    const result = isDraft ? await validateCheckInDraftPayload(body) : await validateCheckInPayload(body);
 
     if ("message" in result) {
       return error(result.message ?? "参数错误");
     }
 
     const checkIn = await prisma.checkIn.create({
-      data: result.data,
+      data: { ...result.data, isDraft },
       include: { category: true },
     });
 

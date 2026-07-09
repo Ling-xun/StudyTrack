@@ -7,6 +7,7 @@ export type CheckInPayload = {
   duration?: number | string;
   mood?: string;
   categoryId?: string;
+  isDraft?: boolean;
 };
 
 export type CategoryPayload = {
@@ -54,6 +55,64 @@ export async function validateCheckInPayload(body: CheckInPayload) {
 
   if (!content) {
     return { message: "学习内容不能为空" };
+  }
+
+  if (content.length > 50000) {
+    return { message: "学习内容不能超过 50000 个字符" };
+  }
+
+  const parsedDate = parseStudyDate(studyDate);
+
+  if (!parsedDate) {
+    return { message: "学习日期格式不正确" };
+  }
+
+  const category = await prisma.category.findUnique({
+    where: { id: categoryId },
+  });
+
+  if (!category) {
+    return { message: "分类不存在" };
+  }
+
+  return {
+    data: {
+      title,
+      content,
+      studyDate: parsedDate,
+      duration,
+      mood,
+      categoryId,
+    },
+  };
+}
+
+export async function validateCheckInDraftPayload(body: CheckInPayload) {
+  const title = body.title ?? "";
+  const content = body.content ?? "";
+  const categoryId = body.categoryId?.trim();
+  const studyDate = body.studyDate?.trim();
+  const duration = Number(body.duration || 0);
+  const mood = body.mood?.trim() || null;
+
+  if (title.length > 50) {
+    return { message: "学习标题不能超过 50 个字符" };
+  }
+
+  if (!categoryId) {
+    return { message: "请选择学习分类" };
+  }
+
+  if (!studyDate) {
+    return { message: "学习日期不能为空" };
+  }
+
+  if (!Number.isInteger(duration) || duration < 0) {
+    return { message: "学习时长必须是非负整数" };
+  }
+
+  if (duration > 1440) {
+    return { message: "学习时长不能超过 1440 分钟" };
   }
 
   if (content.length > 50000) {

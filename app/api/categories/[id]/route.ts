@@ -19,7 +19,7 @@ export async function GET(_request: Request, context: RouteContext) {
     where: { id },
     include: {
       _count: {
-        select: { checkIns: true },
+        select: { checkIns: { where: { isDraft: false } } },
       },
     },
   });

@@ -21,19 +21,19 @@ function endOfDate(value: string) {
 function scopeWhere(scope: AiScope): Prisma.CheckInWhereInput {
   switch (scope.type) {
     case "current":
-      return { id: scope.checkInId };
+      return { id: scope.checkInId, isDraft: false };
     case "category":
-      return { categoryId: scope.categoryId };
+      return { categoryId: scope.categoryId, isDraft: false };
     case "recent_days": {
       const start = new Date();
       start.setHours(0, 0, 0, 0);
       start.setDate(start.getDate() - scope.days + 1);
-      return { studyDate: { gte: start } };
+      return { studyDate: { gte: start }, isDraft: false };
     }
     case "date_range":
-      return { studyDate: { gte: new Date(`${scope.startDate}T00:00:00`), lte: endOfDate(scope.endDate) } };
+      return { studyDate: { gte: new Date(`${scope.startDate}T00:00:00`), lte: endOfDate(scope.endDate) }, isDraft: false };
     case "all":
-      return {};
+      return { isDraft: false };
   }
 }
 

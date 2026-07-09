@@ -19,6 +19,7 @@ export type CheckInListItem = {
   duration: number;
   mood: string | null;
   categoryId: string;
+  isDraft: boolean;
   createdAt: Date | string;
   updatedAt: Date | string;
   category: CategorySummary;

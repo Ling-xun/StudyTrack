@@ -156,6 +156,7 @@ export function CheckInForm({
   const initialFields = useMemo(() => (initialData ? fieldsFromCheckIn(initialData) : emptyFields(categories)), [categories, initialData]);
   const [fields, setFields] = useState<FormFields>(initialFields);
   const [serverDraftId, setServerDraftId] = useState(initialData?.isDraft ? initialData.id : "");
+  const [draftHydrated, setDraftHydrated] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>({ status: "idle" });
   const [recoveryPrompt, setRecoveryPrompt] = useState<RecoveryPrompt | null>(null);
   const [error, setError] = useState("");
@@ -207,6 +208,7 @@ export function CheckInForm({
 
   const applyFields = useCallback(
     (nextFields: FormFields, options: { checkInId?: string; serverUpdatedAt?: string; markServerSaved?: boolean } = {}) => {
+      fieldsRef.current = nextFields;
       setFields(nextFields);
 
       if (options.checkInId) {
@@ -295,6 +297,7 @@ export function CheckInForm({
       }
 
       hydratedRef.current = true;
+      setDraftHydrated(true);
     }
 
     void hydrateDrafts();
@@ -382,7 +385,7 @@ export function CheckInForm({
   }, [saveNow]);
 
   useEffect(() => {
-    if (!hydratedRef.current) {
+    if (!draftHydrated || recoveryPrompt) {
       return;
     }
 
@@ -397,7 +400,7 @@ export function CheckInForm({
     }, AUTO_SAVE_DELAY);
 
     return () => window.clearTimeout(timer);
-  }, [fields, writeLocalDraft]);
+  }, [draftHydrated, fields, recoveryPrompt, writeLocalDraft]);
 
   useEffect(() => {
     function flushDraft() {
@@ -441,7 +444,17 @@ export function CheckInForm({
   }
 
   function updateField<Key extends keyof FormFields>(key: Key, value: FormFields[Key]) {
-    setFields((current) => ({ ...current, [key]: value }));
+    const nextFields = { ...fieldsRef.current, [key]: value };
+    fieldsRef.current = nextFields;
+    setFields(nextFields);
+
+    if (hydratedRef.current && !recoveryPrompt) {
+      writeLocalDraft(nextFields);
+
+      if (formSignature(nextFields) !== lastServerSignatureRef.current) {
+        setSaveState({ status: "saving" });
+      }
+    }
   }
 
   function payloadWithContent(nextContent = fields.content) {
@@ -554,10 +567,14 @@ export function CheckInForm({
             {isEdit ? "更新这次学习的内容和状态" : "把今天的学习节奏留在这里"}
           </p>
         </div>
-        <div className={`hidden items-center gap-1.5 text-sm font-semibold sm:flex ${saveStatus.className}`}>
-          {saveStatus.icon}
-          <span>{saveStatus.text}</span>
-        </div>
+      </div>
+
+      <div
+        className={`mb-5 flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2 text-sm font-semibold ${saveStatus.className}`}
+        aria-live="polite"
+      >
+        {saveStatus.icon}
+        <span>{saveStatus.text}</span>
       </div>
 
       {recoveryPrompt ? (

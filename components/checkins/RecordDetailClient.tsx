@@ -87,7 +87,7 @@ export function RecordDetailClient({ id }: { id: string }) {
     );
   }
 
-  async function saveContent(content: string) {
+  async function saveContent(content: string, options?: { silent?: boolean }) {
     if (!checkIn) {
       return;
     }
@@ -107,6 +107,9 @@ export function RecordDetailClient({ id }: { id: string }) {
 
     queryClient.setQueryData(queryKeys.checkIn(checkIn.id), updatedCheckIn);
     invalidateCheckInData(queryClient, checkIn.id);
+    if (options?.silent) {
+      return;
+    }
     toast("阅读内容已保存");
   }
 
@@ -150,6 +153,7 @@ export function RecordDetailClient({ id }: { id: string }) {
           categoryName={checkIn.category.name}
           categoryColor={checkIn.category.color}
           editable
+          autosaveKey={`checkin-${checkIn.id}`}
           onSaveContent={saveContent}
         />
       </article>

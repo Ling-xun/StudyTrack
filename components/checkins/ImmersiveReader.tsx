@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { MouseEvent, MutableRefObject, ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
@@ -9,10 +9,13 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import {
   AlignLeft,
+  AlertCircle,
   BookOpen,
+  CheckCircle2,
   Code2,
   Edit3,
   Eye,
+  LoaderCircle,
   Maximize2,
   Moon,
   PanelLeft,
@@ -28,6 +31,22 @@ import { cn } from "@/lib/utils";
 type ReaderTheme = "paper" | "light" | "dark";
 type FontSize = "comfortable" | "large" | "focus";
 type ReaderVariant = "section" | "compact";
+type SaveContentOptions = { silent?: boolean };
+
+const READER_AUTO_SAVE_DELAY = 1500;
+const READER_LOCAL_DRAFT_VERSION = 1;
+
+type ReaderSaveState =
+  | { status: "idle" }
+  | { status: "saving" }
+  | { status: "saved"; savedAt: string }
+  | { status: "failed" };
+
+type ReaderLocalDraft = {
+  version: number;
+  content: string;
+  updatedAt: string;
+};
 
 type ContentBlock =
   | {
@@ -114,6 +133,62 @@ function parseContent(content: string): ContentBlock[] {
 function estimateReadingMinutes(content: string) {
   const compactLength = content.replace(/\s/g, "").length;
   return Math.max(1, Math.ceil(compactLength / 450));
+}
+
+function formatReaderSaveTime(value: Date | string) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(value));
+}
+
+function readerLocalDraftKey(key?: string) {
+  return key ? `studytrack:immersive-reader-draft:${key}` : "";
+}
+
+function readReaderLocalDraft(key: string) {
+  if (!key || typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(key);
+
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = JSON.parse(raw) as ReaderLocalDraft;
+
+    if (parsed.version !== READER_LOCAL_DRAFT_VERSION || typeof parsed.content !== "string") {
+      return null;
+    }
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeReaderLocalDraft(key: string, content: string) {
+  if (!key || typeof window === "undefined") {
+    return;
+  }
+
+  const draft: ReaderLocalDraft = {
+    version: READER_LOCAL_DRAFT_VERSION,
+    content,
+    updatedAt: new Date().toISOString(),
+  };
+
+  window.localStorage.setItem(key, JSON.stringify(draft));
+}
+
+function clearReaderLocalDraft(key: string) {
+  if (key && typeof window !== "undefined") {
+    window.localStorage.removeItem(key);
+  }
 }
 
 function blockTitle(block: ContentBlock, index: number) {
@@ -288,6 +363,7 @@ function ReaderToolbar({
   canEdit,
   isEditing,
   isSaving,
+  saveState,
   onThemeChange,
   onFontSizeChange,
   onOutlineToggle,
@@ -304,6 +380,7 @@ function ReaderToolbar({
   canEdit: boolean;
   isEditing: boolean;
   isSaving: boolean;
+  saveState: ReaderSaveState;
   onThemeChange: (theme: ReaderTheme) => void;
   onFontSizeChange: (fontSize: FontSize) => void;
   onOutlineToggle: () => void;
@@ -316,6 +393,14 @@ function ReaderToolbar({
     { value: "light", icon: Sun, label: "明亮", swatch: "#ffffff" },
     { value: "dark", icon: Moon, label: "夜间", swatch: "#020617" },
   ];
+  const saveMeta =
+    saveState.status === "saving"
+      ? { Icon: LoaderCircle, text: "正在自动保存...", className: "text-current/70" }
+      : saveState.status === "saved"
+        ? { Icon: CheckCircle2, text: `已自动保存 ${saveState.savedAt}`, className: "text-teal-700 dark:text-teal-300" }
+        : saveState.status === "failed"
+          ? { Icon: AlertCircle, text: "自动保存失败，已保留本地草稿", className: "text-red-600 dark:text-red-300" }
+          : null;
 
   return (
     <div
@@ -407,6 +492,13 @@ function ReaderToolbar({
           </div>
         ) : null}
 
+        {canEdit && isEditing && saveMeta ? (
+          <div className={cn("inline-flex min-w-0 items-center gap-1.5 rounded-lg border border-current/10 px-3 py-2 text-xs font-bold", saveMeta.className)} aria-live="polite">
+            <saveMeta.Icon className={cn("h-4 w-4 shrink-0", saveState.status === "saving" ? "animate-spin" : "")} aria-hidden="true" />
+            <span className="min-w-0 truncate">{saveMeta.text}</span>
+          </div>
+        ) : null}
+
         <div className="ml-auto flex min-w-[8rem] items-center gap-3">
           <div className="h-2 flex-1 overflow-hidden rounded-full bg-current/10">
             <div ref={progressBarRef} className="h-full rounded-full bg-teal-600" style={{ width: "0%" }} />
@@ -440,6 +532,7 @@ export function ImmersiveReader({
   triggerLabel = "沉浸阅读",
   showTrigger = true,
   openOnMount = false,
+  autosaveKey,
   onRequestClose,
   onContentChange,
   onSaveContent,
@@ -453,9 +546,10 @@ export function ImmersiveReader({
   triggerLabel?: string;
   showTrigger?: boolean;
   openOnMount?: boolean;
+  autosaveKey?: string;
   onRequestClose?: () => void;
   onContentChange?: (content: string) => void;
-  onSaveContent?: (content: string) => Promise<void> | void;
+  onSaveContent?: (content: string, options?: SaveContentOptions) => Promise<void> | void;
 }) {
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState<ReaderTheme>("paper");
@@ -464,8 +558,10 @@ export function ImmersiveReader({
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [autoSaveState, setAutoSaveState] = useState<ReaderSaveState>({ status: "idle" });
   const [draftContent, setDraftContent] = useState(content);
   const [controlsHidden, setControlsHidden] = useState(true);
+  const localDraftKey = useMemo(() => readerLocalDraftKey(autosaveKey), [autosaveKey]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement | null>(null);
   const progressTextRef = useRef<HTMLSpanElement | null>(null);
@@ -473,6 +569,9 @@ export function ImmersiveReader({
   const progressValueRef = useRef(0);
   const lastScrollTopRef = useRef(0);
   const controlsHiddenRef = useRef(true);
+  const draftContentRef = useRef(content);
+  const lastSavedContentRef = useRef(content);
+  const autoSaveRequestRef = useRef(0);
   const blockRefs = useRef<Array<HTMLElement | null>>([]);
   const blocks = useMemo(() => parseContent(draftContent), [draftContent]);
   const readingMinutes = useMemo(() => estimateReadingMinutes(draftContent), [draftContent]);
@@ -488,8 +587,14 @@ export function ImmersiveReader({
   useEffect(() => {
     if (!open || !isEditing) {
       setDraftContent(content);
+      draftContentRef.current = content;
     }
+    lastSavedContentRef.current = content;
   }, [content, isEditing, open]);
+
+  useEffect(() => {
+    draftContentRef.current = draftContent;
+  }, [draftContent]);
 
   useEffect(() => {
     if (!open) {
@@ -515,13 +620,21 @@ export function ImmersiveReader({
 
   useEffect(() => {
     if (open) {
+      const localDraft = readReaderLocalDraft(localDraftKey);
+
+      if (localDraft && localDraft.content !== content) {
+        setDraftContent(localDraft.content);
+        draftContentRef.current = localDraft.content;
+        setAutoSaveState({ status: "failed" });
+      }
+
       updateProgress(0);
       lastScrollTopRef.current = 0;
       setControlsVisibility(true);
       setSaveError("");
       scrollRef.current?.scrollTo({ top: 0 });
     }
-  }, [open]);
+  }, [content, localDraftKey, open]);
 
   useEffect(() => {
     return () => {
@@ -584,7 +697,110 @@ export function ImmersiveReader({
     blockRefs.current[index]?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  const persistDraftContent = useCallback(
+    async ({ closeEditing = false, silent = false }: { closeEditing?: boolean; silent?: boolean } = {}) => {
+      const nextContent = draftContentRef.current;
+
+      if (nextContent === lastSavedContentRef.current) {
+        if (closeEditing) {
+          setIsEditing(false);
+        }
+        return;
+      }
+
+      writeReaderLocalDraft(localDraftKey, nextContent);
+
+      if (!nextContent.trim()) {
+        if (!silent) {
+          setSaveError("学习内容不能为空");
+          setAutoSaveState({ status: "failed" });
+        }
+        return;
+      }
+
+      const requestId = autoSaveRequestRef.current + 1;
+      autoSaveRequestRef.current = requestId;
+
+      if (!silent) {
+        setIsSaving(true);
+        setSaveError("");
+        setAutoSaveState({ status: "saving" });
+      }
+
+      try {
+        onContentChange?.(nextContent);
+        await onSaveContent?.(nextContent, { silent });
+        lastSavedContentRef.current = nextContent;
+        clearReaderLocalDraft(localDraftKey);
+
+        if (requestId === autoSaveRequestRef.current && !silent) {
+          setAutoSaveState({ status: "saved", savedAt: formatReaderSaveTime(new Date()) });
+        }
+
+        if (closeEditing) {
+          setIsEditing(false);
+        }
+      } catch (error) {
+        writeReaderLocalDraft(localDraftKey, nextContent);
+
+        if (!silent) {
+          setSaveError(error instanceof Error ? error.message : "保存失败，已保留本地草稿");
+          setAutoSaveState({ status: "failed" });
+        }
+      } finally {
+        if (!silent) {
+          setIsSaving(false);
+        }
+      }
+    },
+    [localDraftKey, onContentChange, onSaveContent],
+  );
+
+  useEffect(() => {
+    if (!open || !isEditing || !editable || !onSaveContent || draftContent === lastSavedContentRef.current) {
+      return;
+    }
+
+    writeReaderLocalDraft(localDraftKey, draftContent);
+    const timer = window.setTimeout(() => {
+      void persistDraftContent();
+    }, READER_AUTO_SAVE_DELAY);
+
+    return () => window.clearTimeout(timer);
+  }, [draftContent, editable, isEditing, localDraftKey, onSaveContent, open, persistDraftContent]);
+
+  useEffect(() => {
+    if (!open || !isEditing) {
+      return;
+    }
+
+    function flushDraft() {
+      void persistDraftContent({ silent: true });
+    }
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "hidden") {
+        flushDraft();
+      }
+    }
+
+    window.addEventListener("pagehide", flushDraft);
+    window.addEventListener("beforeunload", flushDraft);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      flushDraft();
+      window.removeEventListener("pagehide", flushDraft);
+      window.removeEventListener("beforeunload", flushDraft);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isEditing, open, persistDraftContent]);
+
   function closeReader() {
+    if (isEditing) {
+      void persistDraftContent({ silent: true });
+    }
+
     setOpen(false);
     setIsEditing(false);
     onRequestClose?.();
@@ -608,6 +824,9 @@ export function ImmersiveReader({
   }
 
   async function saveDraft() {
+    await persistDraftContent({ closeEditing: true });
+    return;
+
     const nextContent = draftContent.trim();
 
     if (!nextContent) {
@@ -624,7 +843,7 @@ export function ImmersiveReader({
       setDraftContent(nextContent);
       setIsEditing(false);
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "保存失败，请稍后再试");
+      setSaveError("保存失败，请稍后再试");
     } finally {
       setIsSaving(false);
     }
@@ -645,6 +864,7 @@ export function ImmersiveReader({
                 canEdit={editable}
                 isEditing={isEditing}
                 isSaving={isSaving}
+                saveState={autoSaveState}
                 onThemeChange={setTheme}
                 onFontSizeChange={setFontSize}
                 onOutlineToggle={() => setShowOutline((value) => !value)}
@@ -709,8 +929,15 @@ export function ImmersiveReader({
                             value={draftContent}
                             onScroll={() => setControlsVisibility(true)}
                             onChange={(event) => {
-                              setDraftContent(event.target.value);
-                              onContentChange?.(event.target.value);
+                              const nextContent = event.target.value;
+                              draftContentRef.current = nextContent;
+                              setDraftContent(nextContent);
+                              writeReaderLocalDraft(localDraftKey, nextContent);
+                              onContentChange?.(nextContent);
+
+                              if (nextContent !== lastSavedContentRef.current) {
+                                setAutoSaveState({ status: "saving" });
+                              }
                             }}
                           />
                         </label>

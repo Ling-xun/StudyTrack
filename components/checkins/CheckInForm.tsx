@@ -469,11 +469,14 @@ export function CheckInForm({
     };
   }
 
-  async function saveReaderContent(nextContent: string) {
+  async function saveReaderContent(nextContent: string, options?: { silent?: boolean }) {
     const nextFields = { ...fieldsRef.current, content: nextContent };
     fieldsRef.current = nextFields;
     setFields(nextFields);
     await saveNowRef.current();
+    if (options?.silent) {
+      return;
+    }
     toast("阅读内容已同步到表单");
   }
 

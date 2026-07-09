@@ -34,7 +34,7 @@ function CheckInCardReaderAction({ checkIn }: { checkIn: CheckInListItem }) {
     }
   }
 
-  async function saveContent(content: string) {
+  async function saveContent(content: string, options?: { silent?: boolean }) {
     if (!readerCheckIn) {
       return;
     }
@@ -55,6 +55,9 @@ function CheckInCardReaderAction({ checkIn }: { checkIn: CheckInListItem }) {
     setReaderCheckIn(updatedCheckIn);
     queryClient.setQueryData(queryKeys.checkIn(updatedCheckIn.id), updatedCheckIn);
     invalidateCheckInData(queryClient, updatedCheckIn.id);
+    if (options?.silent) {
+      return;
+    }
     toast("阅读内容已保存");
   }
 
@@ -74,6 +77,7 @@ function CheckInCardReaderAction({ checkIn }: { checkIn: CheckInListItem }) {
           editable
           showTrigger={false}
           openOnMount
+          autosaveKey={`checkin-${readerCheckIn.id}`}
           onRequestClose={() => setReaderCheckIn(null)}
           onSaveContent={saveContent}
         />

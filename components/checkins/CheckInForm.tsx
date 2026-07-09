@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, BookMarked, CheckCircle2, Cloud, FolderPlus, LoaderCircle, Save } from "lucide-react";
 import { ImmersiveReader } from "@/components/checkins/ImmersiveReader";
@@ -444,11 +444,16 @@ export function CheckInForm({
   }
 
   function updateField<Key extends keyof FormFields>(key: Key, value: FormFields[Key]) {
+    const hadRecoveryPrompt = Boolean(recoveryPrompt);
     const nextFields = { ...fieldsRef.current, [key]: value };
     fieldsRef.current = nextFields;
     setFields(nextFields);
 
-    if (hydratedRef.current && !recoveryPrompt) {
+    if (hadRecoveryPrompt) {
+      setRecoveryPrompt(null);
+    }
+
+    if (hydratedRef.current) {
       writeLocalDraft(nextFields);
 
       if (formSignature(nextFields) !== lastServerSignatureRef.current) {
@@ -498,7 +503,8 @@ export function CheckInForm({
     }
   }
 
-  function handleSubmit() {
+  function handleSubmit(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
     setError("");
 
     startTransition(async () => {
@@ -596,7 +602,7 @@ export function CheckInForm({
         </div>
       ) : null}
 
-      <form action={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="title">学习标题</Label>
